@@ -73,7 +73,7 @@ export default function Home() {
     }
 
     setIsGeneratingAI(true);
-    toast.info("AIが90sレトロアニメ風に変換中... 30秒ほどお待ちください");
+    toast.info("AIが遊戯王・ポケモンカード風に変換中... 30〜60秒ほどお待ちください");
 
     try {
       const { base64, mimeType } = await fileToBase64(cardData.photoFile);

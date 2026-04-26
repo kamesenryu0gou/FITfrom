@@ -13,6 +13,7 @@
 import { useRef, useCallback } from "react";
 import { toast } from "sonner";
 import type { CardData, ElementType } from "@/pages/Home";
+import { downloadCard } from "@/lib/cardCanvas";
 
 const ABILITIES = [
   "パワーアップ",
@@ -163,166 +164,16 @@ export default function CardForm({
     toast.success(`攻撃力: ${attack} が決定しました！`);
   }, [updateCardData]);
 
-  // Canvas-based download - bypasses html2canvas oklch issues entirely
+  // Download using cardCanvas utility (pixel-perfect match with preview, Web Share API for mobile)
   const handleDownload = useCallback(async () => {
     toast.info("カードを生成中...");
-
     try {
-      // Card original dimensions
-      const ORIG_W = 638;
-      const ORIG_H = 1011;
-      // Output scale (3x for high resolution)
-      const SCALE = 3;
-      const W = ORIG_W * SCALE;
-      const H = ORIG_H * SCALE;
-
-      // Positions as fractions of card size
-      const UPPER_BAR_TOP = ORIG_H * 0.100;
-      const UPPER_BAR_H = ORIG_H * 0.077;
-      const PHOTO_TOP = ORIG_H * 0.244;
-      const PHOTO_H = ORIG_H * 0.500;
-      const LOWER_BAR_TOP = ORIG_H * 0.800;
-      const LOWER_BAR_H = ORIG_H * 0.078;
-      const BAR_LEFT = ORIG_W * 0.091;
-      const BAR_W = ORIG_W * 0.817;
-      const RARITY_ROW_TOP = ORIG_H * 0.177;
-      const RARITY_ROW_H = ORIG_H * 0.067;
-
-      const canvas = document.createElement("canvas");
-      canvas.width = W;
-      canvas.height = H;
-      const ctx = canvas.getContext("2d")!;
-      ctx.scale(SCALE, SCALE);
-
-      const elementColor = ELEMENT_COLORS[cardData.element];
-
-      // Layer 1: Card base image
-      const cardImg = await loadImage(CARD_IMAGES[cardData.element]);
-      ctx.drawImage(cardImg, 0, 0, ORIG_W, ORIG_H);
-
-      // Layer 2: User photo clipped to white area
-      if (cardData.photoUrl) {
-        try {
-          const photoImg = await loadImage(cardData.photoUrl);
-          ctx.save();
-          ctx.beginPath();
-          ctx.rect(BAR_LEFT, PHOTO_TOP, BAR_W, PHOTO_H);
-          ctx.clip();
-
-          // Cover fit: scale to fill the box
-          const photoAspect = photoImg.width / photoImg.height;
-          const boxAspect = BAR_W / PHOTO_H;
-          let drawW: number, drawH: number, drawX: number, drawY: number;
-          if (photoAspect > boxAspect) {
-            drawH = PHOTO_H;
-            drawW = PHOTO_H * photoAspect;
-            drawX = BAR_LEFT - (drawW - BAR_W) / 2;
-            drawY = PHOTO_TOP;
-          } else {
-            drawW = BAR_W;
-            drawH = BAR_W / photoAspect;
-            drawX = BAR_LEFT;
-            drawY = PHOTO_TOP;
-          }
-          ctx.drawImage(photoImg, drawX, drawY, drawW, drawH);
-          ctx.restore();
-        } catch {
-          // Photo load failed, skip
-        }
-      }
-
-      // Layer 3: Text overlays
-      // Card name in upper bar
-      if (cardData.cardName) {
-        const nameLen = cardData.cardName.length;
-        const nameFontSize = nameLen > 6 ? 22 : nameLen > 4 ? 26 : 32;
-        ctx.font = `900 ${nameFontSize}px 'Noto Sans JP', sans-serif`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        const nameX = BAR_LEFT + BAR_W / 2;
-        const nameY = UPPER_BAR_TOP + UPPER_BAR_H / 2;
-        drawTextWithOutline(ctx, cardData.cardName, nameX, nameY, "#ffffff", "#000000", 5);
-      }
-
-      // Rarity (left) in rarity row
-      if (cardData.rarity) {
-        ctx.font = `900 24px 'Noto Sans JP', sans-serif`;
-        ctx.textAlign = "left";
-        ctx.textBaseline = "middle";
-        const rarityY = RARITY_ROW_TOP + RARITY_ROW_H / 2;
-        drawTextWithOutline(ctx, cardData.rarity, BAR_LEFT + 6, rarityY, "#ffd700", "#000000", 4);
-      }
-
-      // Attack (right) in rarity row
-      if (cardData.attack !== null) {
-        ctx.textAlign = "right";
-        ctx.textBaseline = "middle";
-        const atkY = RARITY_ROW_TOP + RARITY_ROW_H / 2;
-        // "ATK" label
-        ctx.font = `700 16px 'Noto Sans JP', sans-serif`;
-        const atkLabelX = BAR_LEFT + BAR_W - 36;
-        drawTextWithOutline(ctx, "ATK", atkLabelX, atkY, "#ffffff", "#000000", 3);
-        // Attack number
-        ctx.font = `900 30px 'Noto Sans JP', sans-serif`;
-        drawTextWithOutline(ctx, String(cardData.attack), BAR_LEFT + BAR_W - 4, atkY, elementColor, "#000000", 5);
-      }
-
-      // Ability badge below photo
-      if (cardData.ability) {
-        const abilityY = PHOTO_TOP + PHOTO_H + 16;
-        ctx.font = `700 16px 'Noto Sans JP', sans-serif`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        const abilityX = BAR_LEFT + BAR_W / 2;
-        // Badge background
-        const textMetrics = ctx.measureText(cardData.ability);
-        const badgeW = textMetrics.width + 24;
-        const badgeH = 22;
-        ctx.fillStyle = elementColor + "99";
-        ctx.strokeStyle = elementColor;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.roundRect(abilityX - badgeW / 2, abilityY - badgeH / 2, badgeW, badgeH, 11);
-        ctx.fill();
-        ctx.stroke();
-        drawTextWithOutline(ctx, cardData.ability, abilityX, abilityY, "#ffffff", "rgba(0,0,0,0.6)", 2);
-      }
-
-      // Lower bar: special move + description
-      const lowerCenterY = LOWER_BAR_TOP + LOWER_BAR_H / 2;
-      if (cardData.specialMove && cardData.description) {
-        // Both: special move on top half, description on bottom half
-        ctx.font = `900 17px 'Noto Sans JP', sans-serif`;
-        ctx.textAlign = "left";
-        ctx.textBaseline = "middle";
-        const smY = LOWER_BAR_TOP + LOWER_BAR_H * 0.3;
-        drawTextWithOutline(ctx, `⚡ 必殺技：${cardData.specialMove}`, BAR_LEFT + 8, smY, elementColor, "#000000", 3);
-
-        ctx.font = `400 13px 'Noto Sans JP', sans-serif`;
-        const descY = LOWER_BAR_TOP + LOWER_BAR_H * 0.72;
-        drawTextWithOutline(ctx, cardData.description, BAR_LEFT + 8, descY, "#ffffff", "#000000", 3);
-      } else if (cardData.specialMove) {
-        ctx.font = `900 17px 'Noto Sans JP', sans-serif`;
-        ctx.textAlign = "left";
-        ctx.textBaseline = "middle";
-        drawTextWithOutline(ctx, `⚡ 必殺技：${cardData.specialMove}`, BAR_LEFT + 8, lowerCenterY, elementColor, "#000000", 3);
-      } else if (cardData.description) {
-        ctx.font = `400 13px 'Noto Sans JP', sans-serif`;
-        ctx.textAlign = "left";
-        ctx.textBaseline = "middle";
-        drawTextWithOutline(ctx, cardData.description, BAR_LEFT + 8, lowerCenterY, "#ffffff", "#000000", 3);
-      }
-
-      // Export as PNG
-      const link = document.createElement("a");
-      link.download = `fitwars-card-${cardData.cardName || "my-card"}.png`;
-      link.href = canvas.toDataURL("image/png");
-      link.click();
-      toast.success("カードをダウンロードしました！");
+      await downloadCard(cardData);
+      toast.success("カードを保存しました！");
     } catch (error) {
       console.error("Download error:", error);
       const msg = error instanceof Error ? error.message : "不明なエラー";
-      toast.error(`ダウンロードに失敗しました: ${msg}`);
+      toast.error(`保存に失敗しました: ${msg}`);
     }
   }, [cardData]);
 
