@@ -5,13 +5,13 @@
  * - Bold, impactful typography (Noto Sans JP for Japanese text)
  * - Mobile-first: card preview on top, form below
  * - Desktop: side-by-side layout with sticky card preview
- * - Signature elements: glowing card borders, dark panels with subtle borders
  */
 
 import { useState, useRef, useCallback } from "react";
 import { toast } from "sonner";
 import CardPreview from "@/components/CardPreview";
 import CardForm from "@/components/CardForm";
+import { trpc } from "@/lib/trpc";
 
 export type ElementType = "火" | "水" | "草" | "闇";
 
@@ -44,9 +44,27 @@ export default function Home() {
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const cardPreviewRef = useRef<HTMLDivElement>(null);
 
+  const convertToAnimeMutation = trpc.card.convertToAnime.useMutation();
+
   const updateCardData = useCallback((updates: Partial<CardData>) => {
     setCardData((prev) => ({ ...prev, ...updates }));
   }, []);
+
+  // Convert File to base64 string
+  const fileToBase64 = (file: File): Promise<{ base64: string; mimeType: string }> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        // result is "data:image/jpeg;base64,XXXXX"
+        const [header, base64] = result.split(",");
+        const mimeType = header.match(/data:([^;]+)/)?.[1] || "image/jpeg";
+        resolve({ base64, mimeType });
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
 
   const handleAIAnime = useCallback(async () => {
     if (!cardData.photoFile) {
@@ -54,57 +72,20 @@ export default function Home() {
       return;
     }
 
-    const apiKey = import.meta.env.VITE_FRONTEND_FORGE_API_KEY;
-    const apiUrl = import.meta.env.VITE_FRONTEND_FORGE_API_URL;
-
-    if (!apiKey || !apiUrl) {
-      toast.error("APIキーが設定されていません");
-      return;
-    }
-
     setIsGeneratingAI(true);
-    toast.info("AIがアニメ風に変換中です... しばらくお待ちください");
+    toast.info("AIが90sレトロアニメ風に変換中... 30秒ほどお待ちください");
 
     try {
-      const elementDescriptions: Record<ElementType, string> = {
-        火: "fire element warrior, flames, volcanic power, intense red and orange colors",
-        水: "water element warrior, ocean waves, ice crystals, cool blue and cyan colors",
-        草: "grass element warrior, nature magic, forest vines, vibrant green colors",
-        闇: "dark element warrior, shadows, mystical moon energy, deep purple and black colors",
-      };
+      const { base64, mimeType } = await fileToBase64(cardData.photoFile);
 
-      const prompt = `Create an anime-style trading card character illustration.
-      Style: Japanese anime art, vibrant colors, dynamic heroic pose, expressive face.
-      Theme: ${elementDescriptions[cardData.element]} themed fighter character.
-      The character should look powerful and ready for battle, suitable for a trading card game.
-      Full body or upper body shot on a clean white or transparent background.
-      High quality anime illustration with bold outlines and vivid colors.`;
-
-      const response = await fetch(`${apiUrl}/v1/images/generations`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: "dall-e-3",
-          prompt,
-          n: 1,
-          size: "1024x1024",
-          quality: "standard",
-        }),
+      const result = await convertToAnimeMutation.mutateAsync({
+        photoBase64: base64,
+        mimeType,
+        element: cardData.element,
       });
 
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData?.error?.message || `API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      const imageUrl = data.data?.[0]?.url;
-
-      if (imageUrl) {
-        updateCardData({ photoUrl: imageUrl });
+      if (result.imageUrl) {
+        updateCardData({ photoUrl: result.imageUrl });
         toast.success("アニメ風変換が完了しました！");
       } else {
         throw new Error("画像URLが取得できませんでした");
@@ -116,7 +97,7 @@ export default function Home() {
     } finally {
       setIsGeneratingAI(false);
     }
-  }, [cardData.photoFile, cardData.element, updateCardData]);
+  }, [cardData.photoFile, cardData.element, updateCardData, convertToAnimeMutation]);
 
   return (
     <div className="min-h-screen" style={{ background: "#0a0a0f" }}>
