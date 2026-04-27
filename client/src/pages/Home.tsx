@@ -73,7 +73,7 @@ export default function Home() {
     }
 
     setIsGeneratingAI(true);
-    toast.info("AIが遊戯王・ポケモンカード風に変換中... 30〜60秒ほどお待ちください");
+    toast.info("AIがDQ風チビキャラに変換中（勇者/僧侶/魔法使い/魔王/剣士からランダム）... 30～60秒ほどお待ちください");
 
     try {
       const { base64, mimeType } = await fileToBase64(cardData.photoFile);

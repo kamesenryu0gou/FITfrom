@@ -16,16 +16,11 @@ import type { CardData, ElementType } from "@/pages/Home";
 import { downloadCard } from "@/lib/cardCanvas";
 
 const ABILITIES = [
-  "パワーアップ",
-  "スピードブースト",
-  "シールドバリア",
-  "ヒールウェーブ",
-  "クリティカルストライク",
-  "エレメントバースト",
-  "ダブルアタック",
-  "カウンタースタンス",
-  "マナチャージ",
-  "ラストスタンド",
+  { value: "BOOST", label: "BOOST：同属性+20" },
+  { value: "CURSE", label: "CURSE：相手攻撃力-10" },
+  { value: "BREAK", label: "BREAK：属性効果無効" },
+  { value: "VOID", label: "VOID：引き分け" },
+  { value: "LOCK", label: "LOCK：特殊効果無効" },
 ];
 
 const ELEMENT_OPTIONS: { value: ElementType; label: string; color: string; bg: string }[] = [
@@ -387,12 +382,12 @@ export default function CardForm({
               <span style={{ display: "inline-block", animation: "spin 1s linear infinite" }}>
                 ⚙️
               </span>
-              AI変換中... しばらくお待ちください
+              DQ風チビキャラ変換中... しばらくお待ちください
             </>
           ) : (
             <>
               <span>✨</span>
-              写真をアニメ風に変換（90sレトロ）
+              写真をDQ風チビキャラに変換（AI変換）
             </>
           )}
         </button>
@@ -489,8 +484,8 @@ export default function CardForm({
           >
             <option value="">アビリティを選択...</option>
             {ABILITIES.map((ability) => (
-              <option key={ability} value={ability}>
-                {ability}
+              <option key={ability.value} value={ability.value}>
+                {ability.label}
               </option>
             ))}
           </select>

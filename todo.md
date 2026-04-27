@@ -5,3 +5,9 @@
 - [x] AI変換スタイルを「王道ジャパニーズ・デジタルTCG風（遊戯王・ポケモンカード風）」に変更
 - [x] GPT-4oで顔・髪・服装・体型を詳細解析し似顔絵精度を最大化
 - [x] DALL-E 3プロンプトに「Bold outlines, vibrant digital coloring, focused light source, flashy background effects」を反映
+- [x] フロントページ（LP）をReactで実装（index.html参考）
+- [x] ナビゲーション右上に「作成」メニューを追加してカード作成ページへ遷移
+- [x] App.tsxにルーティング追加（/ = LP, /create = カード作成）
+- [x] アビリティプルダウンを5種類に変更（同属性+20/相手攻撃力-10/属性効果無効/引き分け/特殊効果無効）
+- [x] AI変換を5職業DQ風チビキャラに変更（勇者・僧侶・魔法使い・魔王・剣士）
+- [x] BGMをアップロードしてLPに組み込む
