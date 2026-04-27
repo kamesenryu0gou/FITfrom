@@ -94,8 +94,9 @@ describe("gpt-image-1 APIの使用確認", () => {
     expect(routersSource).toContain("images/edits");
   });
 
-  it("写真をFormDataで送信している", () => {
-    expect(routersSource).toContain("multipart/form-data");
+  it("写真をJSON形式（images配列）で送信している", () => {
+    expect(routersSource).toContain("application/json");
+    expect(routersSource).toContain("images: [");
   });
 
   it("ランダム職業選択が実装されている", () => {

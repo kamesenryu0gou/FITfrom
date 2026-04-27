@@ -279,45 +279,29 @@ async function generateAnimeCharacter(options: {
   const prompt = CHARACTER_PROMPTS[randomKey];
 
   // gpt-image-1 の images/edits エンドポイントを使用して写真を直接参照
-  // FormDataで画像とプロンプトを送信
-  const imageBuffer = Buffer.from(options.photoBase64, "base64");
+  // 新しい JSON 形式（images 配列 + image_url に base64 データ URL）で送信
   const mimeType = options.mimeType || "image/jpeg";
-  const ext = mimeType.split("/")[1] || "jpg";
-
-  // FormData を手動構築
-  const boundary = `----FormBoundary${Date.now()}`;
-  const parts: Buffer[] = [];
-
-  const addField = (name: string, value: string) => {
-    parts.push(Buffer.from(
-      `--${boundary}\r\nContent-Disposition: form-data; name="${name}"\r\n\r\n${value}\r\n`
-    ));
-  };
-
-  const addFile = (name: string, filename: string, contentType: string, data: Buffer) => {
-    parts.push(Buffer.from(
-      `--${boundary}\r\nContent-Disposition: form-data; name="${name}"; filename="${filename}"\r\nContent-Type: ${contentType}\r\n\r\n`
-    ));
-    parts.push(data);
-    parts.push(Buffer.from("\r\n"));
-  };
-
-  addField("model", "gpt-image-1");
-  addField("prompt", prompt);
-  addField("n", "1");
-  addField("size", "1024x1024");
-  addFile("image[]", `photo.${ext}`, mimeType, imageBuffer);
-
-  parts.push(Buffer.from(`--${boundary}--\r\n`));
-  const body = Buffer.concat(parts);
+  // JPEG/PNG/WEBP 以外は JPEG として扱う（gpt-image-1 は JPEG/PNG/WEBP のみ対応）
+  const safeMimeType = ["image/jpeg", "image/png", "image/webp"].includes(mimeType)
+    ? mimeType
+    : "image/jpeg";
+  // base64 データ URL 形式に変換
+  const dataUrl = `data:${safeMimeType};base64,${options.photoBase64}`;
 
   const editResponse = await fetch("https://api.openai.com/v1/images/edits", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
-      "Content-Type": `multipart/form-data; boundary=${boundary}`,
+      "Content-Type": "application/json",
     },
-    body,
+    body: JSON.stringify({
+      model: "gpt-image-1",
+      prompt,
+      images: [{ image_url: dataUrl }],
+      n: 1,
+      size: "1024x1024",
+      quality: "high",
+    }),
   });
 
   if (!editResponse.ok) {
