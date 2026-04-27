@@ -22,3 +22,4 @@
 - [x] AI加工設定を全てクリーンリセットし、仕様書（pasted_content_2.txt）の5職業プロンプトをそのまま使用したDQ風チビキャラ変換ロジックに完全置き換え（PDFサンプル画像のような品質を目標）
 - [x] ダウンロード画像の寸法修正：縦向きカード（54×85.6mm）2枚を用紙（100×148.5mm）に正確に配置、余白・カード間隔を調整して印刷ズレを解消
 - [x] gpt-image-1 edit APIの「Invalid image file or mode」エラーを解消（FormData形式からJSON形式（images配列+image_url）に変更、仕様は維持）
+- [x] MPO形式画像の「Unsupported image format: mpo」エラーを解消（sharpライブラリでMPO→JPEG変換処理をサーバー側に追加）

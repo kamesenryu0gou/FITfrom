@@ -4,6 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { storagePut } from "./storage";
+import sharp from "sharp";
 
 /**
  * AI Anime Conversion — DQ風チビキャラ変換 v4 (Clean Reset)
@@ -280,13 +281,29 @@ async function generateAnimeCharacter(options: {
 
   // gpt-image-1 の images/edits エンドポイントを使用して写真を直接参照
   // 新しい JSON 形式（images 配列 + image_url に base64 データ URL）で送信
-  const mimeType = options.mimeType || "image/jpeg";
-  // JPEG/PNG/WEBP 以外は JPEG として扱う（gpt-image-1 は JPEG/PNG/WEBP のみ対応）
-  const safeMimeType = ["image/jpeg", "image/png", "image/webp"].includes(mimeType)
-    ? mimeType
-    : "image/jpeg";
+
+  // MPO・HEIC・TIFF など非対応フォーマットをsharpでJPEGに変換する
+  // （MPOはJPEGヘッダーを持つが複数画像を含む特殊フォーマットでOpenAI APIが拒否する）
+  let safeBase64 = options.photoBase64;
+  let safeMimeType = "image/jpeg";
+  try {
+    const inputBuffer = Buffer.from(options.photoBase64, "base64");
+    const jpegBuffer = await sharp(inputBuffer)
+      .jpeg({ quality: 90 })
+      .toBuffer();
+    safeBase64 = jpegBuffer.toString("base64");
+    safeMimeType = "image/jpeg";
+  } catch (convErr) {
+    // 変換失敗時は元のデータをそのまま使用（JPEG/PNG/WEBPは通常変換不要）
+    const mimeType = options.mimeType || "image/jpeg";
+    safeMimeType = ["image/jpeg", "image/png", "image/webp"].includes(mimeType)
+      ? mimeType
+      : "image/jpeg";
+    safeBase64 = options.photoBase64;
+  }
+
   // base64 データ URL 形式に変換
-  const dataUrl = `data:${safeMimeType};base64,${options.photoBase64}`;
+  const dataUrl = `data:${safeMimeType};base64,${safeBase64}`;
 
   const editResponse = await fetch("https://api.openai.com/v1/images/edits", {
     method: "POST",
