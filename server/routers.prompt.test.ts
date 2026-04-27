@@ -1,8 +1,7 @@
 /**
  * routers.prompt.test.ts
  *
- * v6 — 超精巧ファンタジーイラスト変換ロジック（de91fbb6）復元確認
- * APIエラー解消済み（DALL-E 3 images/generations使用）
+ * v4 Clean Reset — 仕様書（pasted_content_2.txt）のプロンプトが正しく実装されているか検証
  */
 
 import { describe, it, expect } from "vitest";
@@ -14,118 +13,93 @@ const routersSource = readFileSync(
   "utf-8"
 );
 
-describe("v6: gpt-image-1 editモードが使われていない（APIエラー解消確認）", () => {
-  it("images/editsエンドポイントを使用していない", () => {
-    expect(routersSource).not.toContain("images/edits");
+describe("Clean Reset: 仕様書のプロンプトが正しく実装されている", () => {
+  it("旧ルールブロック（NO_TEXT_BLOCK）が削除されている", () => {
+    expect(routersSource).not.toContain("NO_TEXT_BLOCK");
   });
 
-  it("gpt-image-1モデルを使用していない", () => {
-    expect(routersSource).not.toContain('"gpt-image-1"');
+  it("旧ルールブロック（AGE_ANCHOR_BLOCK）が削除されている", () => {
+    expect(routersSource).not.toContain("AGE_ANCHOR_BLOCK");
   });
 
-  it("DALL-E 3 images/generationsエンドポイントを使用している", () => {
-    expect(routersSource).toContain("images/generations");
+  it("旧ルールブロック（THICK_PAINT_BLOCK）が削除されている", () => {
+    expect(routersSource).not.toContain("THICK_PAINT_BLOCK");
   });
 
-  it("dall-e-3モデルを使用している", () => {
-    expect(routersSource).toContain("dall-e-3");
-  });
-});
-
-describe("v6: 超精巧ファンタジーイラスト変換 — MASTER_RULE 5ルール", () => {
-  it("MASTER_RULEが定義されている", () => {
-    expect(routersSource).toContain("MASTER_RULE");
-  });
-
-  it("RULE 1 — 表情同期が含まれている", () => {
-    expect(routersSource).toContain("FACIAL EXPRESSION SYNC");
-    expect(routersSource).toContain("smile shape");
-    expect(routersSource).toContain("eye squint angle");
-  });
-
-  it("RULE 2 — 持ち物ファンタジー置換が含まれている", () => {
-    expect(routersSource).toContain("OBJECT TRANSLATION");
-    expect(routersSource).toContain("Elemental energy crystal");
-  });
-
-  it("RULE 3 — SSRグラフィック品質が含まれている", () => {
-    expect(routersSource).toContain("SSR QUALITY STANDARD");
-    expect(routersSource).toContain("High-end 2D game splash art");
-    expect(routersSource).toContain("Semi-chibi proportions");
-  });
-
-  it("RULE 4 — 色彩継承が含まれている", () => {
-    expect(routersSource).toContain("COLOR PALETTE INHERITANCE");
-    expect(routersSource).toContain("dominant colors");
-  });
-
-  it("RULE 5 — ポーズ・顔固定が含まれている", () => {
-    expect(routersSource).toContain("POSE & FACE LOCK");
-    expect(routersSource).toContain("zero deviation");
+  it("旧ルールブロック（MASTER_RULE）が削除されている", () => {
+    expect(routersSource).not.toContain("MASTER_RULE");
   });
 });
 
-describe("v6: GPT-4o Vision 6軸分析", () => {
-  it("GPT-4o visionモデルを使用している", () => {
-    expect(routersSource).toContain("gpt-4o");
+describe("5職業プロンプトの実装確認", () => {
+  it("Hero（勇者）プロンプトが定義されている", () => {
+    expect(routersSource).toContain("HERO_PROMPT");
+    expect(routersSource).toContain("chibi HERO");
+    expect(routersSource).toContain("Dragon Quest");
   });
 
-  it("AXIS 1 — 表情力学の分析が含まれている", () => {
-    expect(routersSource).toContain("AXIS 1");
-    expect(routersSource).toContain("FACIAL EXPRESSION MECHANICS");
+  it("Priest（僧侶）プロンプトが定義されている", () => {
+    expect(routersSource).toContain("PRIEST_PROMPT");
+    expect(routersSource).toContain("chibi PRIEST");
   });
 
-  it("AXIS 2 — 顔構造の分析が含まれている", () => {
-    expect(routersSource).toContain("AXIS 2");
-    expect(routersSource).toContain("FACE STRUCTURE");
+  it("Mage（魔法使い）プロンプトが定義されている", () => {
+    expect(routersSource).toContain("MAGE_PROMPT");
+    expect(routersSource).toContain("chibi MAGE");
   });
 
-  it("AXIS 4 — 持ち物・背景の分析が含まれている", () => {
-    expect(routersSource).toContain("AXIS 4");
-    expect(routersSource).toContain("HELD OBJECTS");
+  it("DemonLord（魔王）プロンプトが定義されている", () => {
+    expect(routersSource).toContain("DEMON_LORD_PROMPT");
+    expect(routersSource).toContain("chibi DEMON LORD");
   });
 
-  it("AXIS 6 — ポーズの分析が含まれている", () => {
-    expect(routersSource).toContain("AXIS 6");
-    expect(routersSource).toContain("POSE");
-  });
-
-  it("写真をbase64でGPT-4oに送信している", () => {
-    expect(routersSource).toContain("image_url");
-    expect(routersSource).toContain("base64");
+  it("Swordsman（剣士）プロンプトが定義されている", () => {
+    expect(routersSource).toContain("SWORDSMAN_PROMPT");
+    expect(routersSource).toContain("chibi SWORDSMAN");
   });
 });
 
-describe("v6: 5職業の定義", () => {
-  it("CHARACTER_PROMPTSに5職業が定義されている", () => {
-    expect(routersSource).toContain("CHARACTER_PROMPTS");
-    expect(routersSource).toContain("Hero");
-    expect(routersSource).toContain("Priest");
-    expect(routersSource).toContain("Mage");
-    expect(routersSource).toContain("DemonLord");
-    expect(routersSource).toContain("Swordsman");
+describe("仕様書の重要指示が全プロンプトに含まれている", () => {
+  it("ポーズ維持の指示が含まれている（Hero）", () => {
+    expect(routersSource).toContain("Faithfully preserve the original pose");
   });
 
-  it("Dragon Quest-style Cosplay/Outfit（服装限定）が含まれている", () => {
-    expect(routersSource).toContain("Dragon Quest-style Cosplay/Outfit");
+  it("顔の特徴保持の指示が含まれている（Hero）", () => {
+    expect(routersSource).toContain("Preserve facial structure, expression, eye shape");
+  });
+
+  it("服の色継承の指示が含まれている（Hero）", () => {
+    expect(routersSource).toContain("strictly preserving the original clothing color palette");
+  });
+
+  it("背景は服の色から派生する指示が含まれている", () => {
+    expect(routersSource).toContain("derived from the dominant clothing color");
+  });
+
+  it("チビ比率の指示が含まれている", () => {
+    expect(routersSource).toContain("chibi proportion");
+  });
+
+  it("フォトリアリズム禁止が含まれている", () => {
+    expect(routersSource).toContain("Avoid photorealism");
+  });
+});
+
+describe("gpt-image-1 APIの使用確認", () => {
+  it("gpt-image-1モデルを使用している", () => {
+    expect(routersSource).toContain("gpt-image-1");
+  });
+
+  it("images/editsエンドポイントを使用している", () => {
+    expect(routersSource).toContain("images/edits");
+  });
+
+  it("写真をFormDataで送信している", () => {
+    expect(routersSource).toContain("multipart/form-data");
   });
 
   it("ランダム職業選択が実装されている", () => {
     expect(routersSource).toContain("CHARACTER_KEYS");
     expect(routersSource).toContain("Math.random()");
-  });
-});
-
-describe("v6: DALL-E 3 パラメーター設定", () => {
-  it("quality: hdが設定されている", () => {
-    expect(routersSource).toContain('"hd"');
-  });
-
-  it("style: naturalが設定されている（元画像への忠実度優先）", () => {
-    expect(routersSource).toContain('"natural"');
-  });
-
-  it("response_format: b64_jsonが設定されている", () => {
-    expect(routersSource).toContain("b64_json");
   });
 });
