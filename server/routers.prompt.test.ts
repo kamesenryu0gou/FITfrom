@@ -1,8 +1,8 @@
 /**
  * routers.prompt.test.ts
  *
- * v5 — DALL-E 3 新規生成モード（gpt-image-1 editモード廃止）
- * APIエラー解消・テキスト排除・年齢固定・厚塗り品質の検証
+ * v6 — 超精巧ファンタジーイラスト変換ロジック（de91fbb6）復元確認
+ * APIエラー解消済み（DALL-E 3 images/generations使用）
  */
 
 import { describe, it, expect } from "vitest";
@@ -14,7 +14,7 @@ const routersSource = readFileSync(
   "utf-8"
 );
 
-describe("v5: gpt-image-1 editモードが廃止されている", () => {
+describe("v6: gpt-image-1 editモードが使われていない（APIエラー解消確認）", () => {
   it("images/editsエンドポイントを使用していない", () => {
     expect(routersSource).not.toContain("images/edits");
   });
@@ -32,13 +32,62 @@ describe("v5: gpt-image-1 editモードが廃止されている", () => {
   });
 });
 
-describe("v5: GPT-4o Visionによる特徴抽出", () => {
-  it("extractPersonFeatures関数が定義されている", () => {
-    expect(routersSource).toContain("extractPersonFeatures");
+describe("v6: 超精巧ファンタジーイラスト変換 — MASTER_RULE 5ルール", () => {
+  it("MASTER_RULEが定義されている", () => {
+    expect(routersSource).toContain("MASTER_RULE");
   });
 
+  it("RULE 1 — 表情同期が含まれている", () => {
+    expect(routersSource).toContain("FACIAL EXPRESSION SYNC");
+    expect(routersSource).toContain("smile shape");
+    expect(routersSource).toContain("eye squint angle");
+  });
+
+  it("RULE 2 — 持ち物ファンタジー置換が含まれている", () => {
+    expect(routersSource).toContain("OBJECT TRANSLATION");
+    expect(routersSource).toContain("Elemental energy crystal");
+  });
+
+  it("RULE 3 — SSRグラフィック品質が含まれている", () => {
+    expect(routersSource).toContain("SSR QUALITY STANDARD");
+    expect(routersSource).toContain("High-end 2D game splash art");
+    expect(routersSource).toContain("Semi-chibi proportions");
+  });
+
+  it("RULE 4 — 色彩継承が含まれている", () => {
+    expect(routersSource).toContain("COLOR PALETTE INHERITANCE");
+    expect(routersSource).toContain("dominant colors");
+  });
+
+  it("RULE 5 — ポーズ・顔固定が含まれている", () => {
+    expect(routersSource).toContain("POSE & FACE LOCK");
+    expect(routersSource).toContain("zero deviation");
+  });
+});
+
+describe("v6: GPT-4o Vision 6軸分析", () => {
   it("GPT-4o visionモデルを使用している", () => {
     expect(routersSource).toContain("gpt-4o");
+  });
+
+  it("AXIS 1 — 表情力学の分析が含まれている", () => {
+    expect(routersSource).toContain("AXIS 1");
+    expect(routersSource).toContain("FACIAL EXPRESSION MECHANICS");
+  });
+
+  it("AXIS 2 — 顔構造の分析が含まれている", () => {
+    expect(routersSource).toContain("AXIS 2");
+    expect(routersSource).toContain("FACE STRUCTURE");
+  });
+
+  it("AXIS 4 — 持ち物・背景の分析が含まれている", () => {
+    expect(routersSource).toContain("AXIS 4");
+    expect(routersSource).toContain("HELD OBJECTS");
+  });
+
+  it("AXIS 6 — ポーズの分析が含まれている", () => {
+    expect(routersSource).toContain("AXIS 6");
+    expect(routersSource).toContain("POSE");
   });
 
   it("写真をbase64でGPT-4oに送信している", () => {
@@ -47,38 +96,9 @@ describe("v5: GPT-4o Visionによる特徴抽出", () => {
   });
 });
 
-describe("v5: buildDalle3Prompt関数の品質ルール", () => {
-  it("buildDalle3Prompt関数が定義されている", () => {
-    expect(routersSource).toContain("buildDalle3Prompt");
-  });
-
-  it("テキスト完全排除ルールが含まれている", () => {
-    expect(routersSource).toContain("NO text");
-    expect(routersSource).toContain("NO letters");
-    expect(routersSource).toContain("NO numbers");
-    expect(routersSource).toContain("NO watermark");
-    expect(routersSource).toContain("NO captions");
-  });
-
-  it("年齢・顔の固定ルールが含まれている", () => {
-    expect(routersSource).toContain("do NOT rejuvenate or idealize");
-    expect(routersSource).toContain("Preserve exact facial structure");
-  });
-
-  it("高品質厚塗りスタイルが含まれている", () => {
-    expect(routersSource).toContain("Masterpiece");
-    expect(routersSource).toContain("high-end TCG splash art");
-    expect(routersSource).toContain("Rich digital painting");
-    expect(routersSource).toContain("SSR game card quality");
-  });
-
-  it("Dragon Quest-style cosplay（服装限定）が含まれている", () => {
-    expect(routersSource).toContain("Dragon Quest-style cosplay outfit");
-  });
-});
-
-describe("v5: 5職業の定義", () => {
-  it("JOBSに5職業が定義されている", () => {
+describe("v6: 5職業の定義", () => {
+  it("CHARACTER_PROMPTSに5職業が定義されている", () => {
+    expect(routersSource).toContain("CHARACTER_PROMPTS");
     expect(routersSource).toContain("Hero");
     expect(routersSource).toContain("Priest");
     expect(routersSource).toContain("Mage");
@@ -86,20 +106,17 @@ describe("v5: 5職業の定義", () => {
     expect(routersSource).toContain("Swordsman");
   });
 
-  it("各職業にJRPGアウトフィットが定義されている", () => {
-    expect(routersSource).toContain("JRPG hero");
-    expect(routersSource).toContain("JRPG healer");
-    expect(routersSource).toContain("JRPG mage");
-    expect(routersSource).toContain("JRPG demon lord");
-    expect(routersSource).toContain("JRPG warrior");
+  it("Dragon Quest-style Cosplay/Outfit（服装限定）が含まれている", () => {
+    expect(routersSource).toContain("Dragon Quest-style Cosplay/Outfit");
   });
 
   it("ランダム職業選択が実装されている", () => {
+    expect(routersSource).toContain("CHARACTER_KEYS");
     expect(routersSource).toContain("Math.random()");
   });
 });
 
-describe("v5: DALL-E 3 パラメーター設定", () => {
+describe("v6: DALL-E 3 パラメーター設定", () => {
   it("quality: hdが設定されている", () => {
     expect(routersSource).toContain('"hd"');
   });
@@ -110,27 +127,5 @@ describe("v5: DALL-E 3 パラメーター設定", () => {
 
   it("response_format: b64_jsonが設定されている", () => {
     expect(routersSource).toContain("b64_json");
-  });
-});
-
-describe("v5: 旧バージョンの残骸がない", () => {
-  it("NO_TEXT_BLOCKが削除されている", () => {
-    expect(routersSource).not.toContain("NO_TEXT_BLOCK");
-  });
-
-  it("AGE_ANCHOR_BLOCKが削除されている", () => {
-    expect(routersSource).not.toContain("AGE_ANCHOR_BLOCK");
-  });
-
-  it("THICK_PAINT_BLOCKが削除されている", () => {
-    expect(routersSource).not.toContain("THICK_PAINT_BLOCK");
-  });
-
-  it("MASTER_RULEが削除されている", () => {
-    expect(routersSource).not.toContain("MASTER_RULE");
-  });
-
-  it("HERO_PROMPT定数が削除されている（v5はJOBS配列に統合）", () => {
-    expect(routersSource).not.toContain("const HERO_PROMPT");
   });
 });
