@@ -6,265 +6,92 @@ import { z } from "zod";
 import { storagePut } from "./storage";
 
 /**
- * AI Anime Conversion — DQ風チビキャラ変換 v4 (Clean Reset)
- *
- * 仕様書（pasted_content_2.txt）のプロンプトをそのまま使用。
- * これまでの追加ルールは全て削除。
+ * AI Anime Conversion — DQ風チビキャラ変換 v5
  *
  * Pipeline:
- * Step 1 → DALL-E 3 with image edit (gpt-image-1) — 写真を直接参照してキャラクター生成
- *           ※ gpt-image-1はimages/editsエンドポイントで写真を直接入力として使用可能
- * Step 2 → Storage保存 → URL返却
+ * Step 1 → GPT-4o Vision: 写真から人物特徴（顔・年齢・髪・服の色）を抽出
+ * Step 2 → DALL-E 3 images/generations: 特徴を埋め込んだプロンプトで新規生成
+ *
+ * ※ gpt-image-1 editモードは廃止（APIエラー回避）
+ * ※ 写真はビジュアルリファレンスとして使用（編集ではなく新規生成）
  */
 
-// ── 5 Character Prompts (仕様書そのまま) ──────────────────────────────────
+// ── Character Job Definitions ─────────────────────────────────────────────
 
-const HERO_PROMPT = `Using the uploaded image as reference, generate an isekai anime–style chibi HERO
-in a Dragon Quest–inspired illustration style with strong consistency.
+const JOBS = [
+  { key: "Hero",      ja: "勇者",   outfit: "light armor, cape, sword, JRPG hero" },
+  { key: "Priest",    ja: "僧侶",   outfit: "white robe, staff, holy symbol, JRPG healer" },
+  { key: "Mage",      ja: "魔法使い", outfit: "pointed hat, magic robe, glowing staff, JRPG mage" },
+  { key: "DemonLord", ja: "魔王",   outfit: "dark cloak, horns, magical aura, JRPG demon lord" },
+  { key: "Swordsman", ja: "剣士",   outfit: "leather armor, dual blades, battle stance, JRPG warrior" },
+];
 
-Art Style:
-Dragon Quest–inspired anime illustration style (classic JRPG fantasy look),
-clean and bold anime lineart, clear outlines,
-simple and readable shapes,
-soft cel shading with minimal gradients,
-bright but natural fantasy color tones,
-highly consistent and repeatable Japanese RPG character illustration style.
+// ── Step 1: GPT-4o Vision — 写真から人物特徴を抽出 ──────────────────────────
 
-NOT copying or referencing any specific Dragon Quest character.
-No parody, no direct character resemblance.
-Original character design only, inspired by classic JRPG aesthetics.
+async function extractPersonFeatures(
+  photoBase64: string,
+  mimeType: string,
+  apiKey: string
+): Promise<string> {
+  const visionRes = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "gpt-4o",
+      max_tokens: 300,
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a character artist assistant. Analyze the photo and output a concise English description of the person for use in an illustration prompt. Focus only on: age range (be specific, e.g. 'man in his 40s'), hair color and style, facial features (beard, glasses if any), body type, and dominant clothing colors. Output as a single paragraph, max 80 words. No bullet points.",
+        },
+        {
+          role: "user",
+          content: [
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:${mimeType};base64,${photoBase64}`,
+                detail: "low",
+              },
+            },
+            {
+              type: "text",
+              text: "Describe this person's appearance for an illustration reference.",
+            },
+          ],
+        },
+      ],
+    }),
+  });
 
-IMPORTANT – Style Consistency Rules:
-Use the exact same illustration style, line thickness, eye design,
-face proportions, and cel-shading method as all other character generations.
-Avoid stylistic randomness.
+  if (!visionRes.ok) {
+    const err = await visionRes.json().catch(() => ({})) as { error?: { message?: string } };
+    throw new Error(`GPT-4o vision error: ${err?.error?.message || visionRes.status}`);
+  }
 
-Pose & Structure:
-– Faithfully preserve the original pose, body angle, arm position,
-  stance, and gesture from the uploaded image
-– Only adjust proportions to chibi scale without changing the pose
+  const visionData = await visionRes.json() as {
+    choices?: Array<{ message?: { content?: string } }>;
+  };
+  return visionData.choices?.[0]?.message?.content?.trim() ?? "adult person";
+}
 
-Character Design:
-– Slightly large head, small body (chibi proportion)
-– Do NOT over-exaggerate or deform the face
-– Preserve facial structure, expression, eye shape, and mouth shape
-– Maintain strong resemblance to the original person
+// ── Step 2: DALL-E 3 新規生成 ─────────────────────────────────────────────
 
-Outfit & Theme:
-Fantasy hero outfit inspired by classic JRPG / Dragon Quest–style heroes
-(light armor, cape, sword),
-while strictly preserving the original clothing color palette
-and overall visual impression from the uploaded image.
+function buildDalle3Prompt(personDesc: string, outfit: string): string {
+  return `Masterpiece, high-end TCG splash art, cinematic dramatic lighting, intricate hyper-detailed.
+Semi-chibi character illustration, Dragon Quest-style cosplay outfit: ${outfit}.
+Character based on this person: ${personDesc}.
+Preserve exact facial structure, bone structure, age, hair, expression — do NOT rejuvenate or idealize.
+Rich digital painting, thick paint texture, detailed fabric folds, soft global illumination, SSR game card quality.
+Pure artwork only — NO text, NO letters, NO numbers, NO watermark, NO captions, NO descriptions anywhere in the image.
+1:1 square composition, centered character, fantasy background.`.trim();
+}
 
-Background:
-Simple flat color or soft gradient,
-derived from the dominant clothing color.
-
-Output:
-1:1 square format, centered character,
-clean anime lineart, soft cel shading,
-high-quality 2D Japanese RPG-style illustration.
-
-Avoid photorealism, 3D, western cartoon style, painterly textures.`;
-
-const PRIEST_PROMPT = `Using the uploaded image as reference, generate an isekai anime–style chibi PRIEST
-in a Dragon Quest–inspired illustration style with strong consistency.
-
-Art Style:
-Dragon Quest–inspired anime illustration style (classic JRPG fantasy look),
-clean and bold anime lineart, clear outlines,
-simple and readable shapes,
-soft cel shading with minimal gradients,
-bright but natural fantasy color tones,
-highly consistent and repeatable Japanese RPG character illustration style.
-
-NOT copying or referencing any specific Dragon Quest character.
-No parody, no direct character resemblance.
-Original character design only, inspired by classic JRPG aesthetics.
-
-IMPORTANT – Style Consistency Rules:
-Use the exact same illustration style, facial proportions,
-eye design, and shading method as previous generations.
-
-Pose & Structure:
-– Accurately preserve the original pose, posture,
-  arm position, and body direction from the uploaded image
-– Convert only into chibi proportions without altering the pose
-
-Character Design:
-– Chibi proportions with restrained deformation
-– Preserve facial expression and likeness as closely as possible
-– Gentle and calm impression while matching the original face
-
-Outfit & Theme:
-Fantasy priest / healer outfit (robe, staff, holy accessory),
-in classic JRPG / Dragon Quest–style design,
-while preserving the original clothing colors and balance.
-
-Background:
-Minimal flat or soft gradient background,
-color derived from the dominant clothing color.
-
-Output:
-1:1 square, centered,
-clean anime lineart, soft cel shading,
-consistent JRPG game-icon quality.
-
-Avoid realism, 3D rendering, dramatic lighting.`;
-
-const MAGE_PROMPT = `Using the uploaded image as reference, generate an isekai anime–style chibi MAGE
-in a Dragon Quest–inspired illustration style with strong consistency.
-
-Art Style:
-Dragon Quest–inspired anime illustration style (classic JRPG fantasy look),
-clean and bold anime lineart, clear outlines,
-simple and readable shapes,
-soft cel shading with minimal gradients,
-bright but natural fantasy color tones,
-highly consistent and repeatable Japanese RPG character illustration style.
-
-NOT copying or referencing any specific Dragon Quest character.
-No parody, no direct character resemblance.
-Original character design only, inspired by classic JRPG aesthetics.
-
-IMPORTANT – Style Consistency Rules:
-Use the same drawing style, line weight,
-eye design, and shading method every time.
-
-Pose & Structure:
-– Maintain the original pose, silhouette,
-  hand position, and body orientation from the uploaded image
-– Apply chibi proportions without changing the pose
-
-Character Design:
-– Slightly large head, small body
-– Do NOT distort or exaggerate facial features
-– Preserve eye shape, mouth shape, and expression
-
-Outfit & Theme:
-Fantasy mage outfit (robe, hat, magic staff, subtle magic effects),
-in a classic JRPG / Dragon Quest–inspired design,
-while keeping the original clothing color palette and impression.
-
-Background:
-Simple, clean flat or gradient background,
-derived from the dominant clothing color.
-
-Output:
-1:1 square, centered composition,
-soft cel shading, polished 2D anime illustration.
-
-Avoid photorealism, 3D, painterly styles.`;
-
-const DEMON_LORD_PROMPT = `Using the uploaded image as reference, generate an isekai anime–style chibi DEMON LORD
-in a Dragon Quest–inspired illustration style with strong consistency.
-
-IMPORTANT – Style Consistency Rules:
-Use the exact same illustration style,
-face proportions, eye design,
-and shading method as previous generations.
-
-Art Style:
-Dragon Quest–inspired anime illustration style (classic JRPG fantasy look),
-clean and bold anime lineart, clear outlines,
-simple and readable shapes,
-soft cel shading with minimal gradients,
-bright but natural fantasy color tones,
-highly consistent and repeatable Japanese RPG character illustration style.
-
-NOT copying or referencing any specific Dragon Quest character.
-No parody, no direct character resemblance.
-Original character design only, inspired by classic JRPG aesthetics.
-
-Pose & Structure:
-– Preserve the original pose, stance,
-  body direction, and gesture from the uploaded image
-– Convert into chibi proportions without altering pose dynamics
-
-Character Design:
-– Chibi proportions with controlled deformation
-– Preserve facial structure and expression
-– Slightly intimidating but still cute and stylized
-
-Outfit & Theme:
-Fantasy demon lord outfit
-(dark cloak, horns or crown, subtle magical aura),
-classic JRPG / Dragon Quest–style fantasy design,
-while retaining the original clothing color palette
-and overall impression.
-
-Background:
-Simple flat or gradient background,
-derived from the dominant clothing color.
-
-Output:
-1:1 square, centered,
-clean anime lineart, soft cel shading,
-polished 2D Japanese RPG illustration.
-
-Avoid realism, 3D, grotesque or horror elements.`;
-
-const SWORDSMAN_PROMPT = `Using the uploaded image as reference, generate an isekai anime–style chibi SWORDSMAN
-in a Dragon Quest–inspired illustration style with strong consistency.
-
-Art Style:
-Dragon Quest–inspired anime illustration style (classic JRPG fantasy look),
-clean and bold anime lineart, clear outlines,
-simple and readable shapes,
-soft cel shading with minimal gradients,
-bright but natural fantasy color tones,
-highly consistent and repeatable Japanese RPG character illustration style.
-
-NOT copying or referencing any specific Dragon Quest character.
-No parody, no direct character resemblance.
-Original character design only, inspired by classic JRPG aesthetics.
-
-IMPORTANT – Style Consistency Rules:
-Use the exact same illustration style, line thickness,
-face proportions, eye design,
-and cel-shading method as previous character generations
-Avoid stylistic randomness.
-
-Pose & Structure:
-– Faithfully preserve the original pose, stance,
-  body angle, arm position, and gesture from the uploaded image
-– Convert only into chibi proportions without changing the pose dynamics
-
-Character Design:
-– Slightly large head, small body (chibi proportion)
-– Controlled deformation: do NOT exaggerate or distort the face
-– Preserve facial structure, eye shape, mouth shape, and expression
-– Maintain strong resemblance to the original person
-
-Outfit & Theme:
-Fantasy swordsman outfit inspired by classic JRPG / Dragon Quest–style warriors
-(light armor, leather gear, sword or dual blades),
-while strictly preserving the original clothing color palette
-and overall visual impression from the uploaded image.
-
-Background:
-Simple flat color or soft gradient background,
-derived from and harmonized with the dominant clothing color.
-
-Output:
-1:1 square composition, centered character,
-clean anime lineart, soft cel shading,
-high-quality 2D Japanese RPG chibi illustration
-suitable for icons or character sets.
-
-Avoid photorealism, 3D rendering,
-painterly textures, western cartoon styles,
-complex or detailed backgrounds.`;
-
-const CHARACTER_PROMPTS: Record<string, string> = {
-  Hero: HERO_PROMPT,
-  Priest: PRIEST_PROMPT,
-  Mage: MAGE_PROMPT,
-  DemonLord: DEMON_LORD_PROMPT,
-  Swordsman: SWORDSMAN_PROMPT,
-};
-
-const CHARACTER_KEYS = Object.keys(CHARACTER_PROMPTS);
+// ── Main Function ─────────────────────────────────────────────────────────
 
 async function generateAnimeCharacter(options: {
   photoBase64: string;
@@ -274,60 +101,46 @@ async function generateAnimeCharacter(options: {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not configured");
 
+  // Step 1: 写真から人物特徴を抽出
+  const personDesc = await extractPersonFeatures(
+    options.photoBase64,
+    options.mimeType,
+    apiKey
+  );
+
   // ランダムに職業を選択
-  const randomKey = CHARACTER_KEYS[Math.floor(Math.random() * CHARACTER_KEYS.length)];
-  const prompt = CHARACTER_PROMPTS[randomKey];
+  const job = JOBS[Math.floor(Math.random() * JOBS.length)];
+  const prompt = buildDalle3Prompt(personDesc, job.outfit);
 
-  // gpt-image-1 の images/edits エンドポイントを使用して写真を直接参照
-  // FormDataで画像とプロンプトを送信
-  const imageBuffer = Buffer.from(options.photoBase64, "base64");
-  const mimeType = options.mimeType || "image/jpeg";
-  const ext = mimeType.split("/")[1] || "jpg";
-
-  // FormData を手動構築
-  const boundary = `----FormBoundary${Date.now()}`;
-  const parts: Buffer[] = [];
-
-  const addField = (name: string, value: string) => {
-    parts.push(Buffer.from(
-      `--${boundary}\r\nContent-Disposition: form-data; name="${name}"\r\n\r\n${value}\r\n`
-    ));
-  };
-
-  const addFile = (name: string, filename: string, contentType: string, data: Buffer) => {
-    parts.push(Buffer.from(
-      `--${boundary}\r\nContent-Disposition: form-data; name="${name}"; filename="${filename}"\r\nContent-Type: ${contentType}\r\n\r\n`
-    ));
-    parts.push(data);
-    parts.push(Buffer.from("\r\n"));
-  };
-
-  addField("model", "gpt-image-1");
-  addField("prompt", prompt);
-  addField("n", "1");
-  addField("size", "1024x1024");
-  addFile("image[]", `photo.${ext}`, mimeType, imageBuffer);
-
-  parts.push(Buffer.from(`--${boundary}--\r\n`));
-  const body = Buffer.concat(parts);
-
-  const editResponse = await fetch("https://api.openai.com/v1/images/edits", {
+  // Step 2: DALL-E 3 新規生成（images/generations）
+  const genRes = await fetch("https://api.openai.com/v1/images/generations", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
-      "Content-Type": `multipart/form-data; boundary=${boundary}`,
+      "Content-Type": "application/json",
     },
-    body,
+    body: JSON.stringify({
+      model: "dall-e-3",
+      prompt,
+      n: 1,
+      size: "1024x1024",
+      quality: "hd",
+      style: "natural",
+      response_format: "b64_json",
+    }),
   });
 
-  if (!editResponse.ok) {
-    const err = await editResponse.json().catch(() => ({})) as { error?: { message?: string } };
-    throw new Error(`gpt-image-1 edit error: ${err?.error?.message || editResponse.status}`);
+  if (!genRes.ok) {
+    const err = await genRes.json().catch(() => ({})) as { error?: { message?: string } };
+    throw new Error(`DALL-E 3 generation error: ${err?.error?.message || genRes.status}`);
   }
 
-  const editData = await editResponse.json() as { data?: Array<{ b64_json?: string; url?: string }> };
-  const b64 = editData.data?.[0]?.b64_json;
-  const imageUrl = editData.data?.[0]?.url;
+  const genData = await genRes.json() as {
+    data?: Array<{ b64_json?: string; url?: string }>;
+  };
+
+  const b64 = genData.data?.[0]?.b64_json;
+  const imageUrl = genData.data?.[0]?.url;
 
   if (b64) {
     const buffer = Buffer.from(b64, "base64");
@@ -338,7 +151,6 @@ async function generateAnimeCharacter(options: {
     );
     return url;
   } else if (imageUrl) {
-    // URLが返ってきた場合はダウンロードしてストレージに保存
     const imgRes = await fetch(imageUrl);
     if (!imgRes.ok) throw new Error("Failed to download generated image");
     const imgBuffer = Buffer.from(await imgRes.arrayBuffer());
@@ -350,7 +162,7 @@ async function generateAnimeCharacter(options: {
     return url;
   }
 
-  throw new Error("No image data returned from gpt-image-1");
+  throw new Error("No image data returned from DALL-E 3");
 }
 
 export const appRouter = router({

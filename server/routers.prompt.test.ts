@@ -1,7 +1,8 @@
 /**
  * routers.prompt.test.ts
  *
- * v4 Clean Reset — 仕様書（pasted_content_2.txt）のプロンプトが正しく実装されているか検証
+ * v5 — DALL-E 3 新規生成モード（gpt-image-1 editモード廃止）
+ * APIエラー解消・テキスト排除・年齢固定・厚塗り品質の検証
  */
 
 import { describe, it, expect } from "vitest";
@@ -13,93 +14,123 @@ const routersSource = readFileSync(
   "utf-8"
 );
 
-describe("Clean Reset: 仕様書のプロンプトが正しく実装されている", () => {
-  it("旧ルールブロック（NO_TEXT_BLOCK）が削除されている", () => {
-    expect(routersSource).not.toContain("NO_TEXT_BLOCK");
+describe("v5: gpt-image-1 editモードが廃止されている", () => {
+  it("images/editsエンドポイントを使用していない", () => {
+    expect(routersSource).not.toContain("images/edits");
   });
 
-  it("旧ルールブロック（AGE_ANCHOR_BLOCK）が削除されている", () => {
-    expect(routersSource).not.toContain("AGE_ANCHOR_BLOCK");
+  it("gpt-image-1モデルを使用していない", () => {
+    expect(routersSource).not.toContain('"gpt-image-1"');
   });
 
-  it("旧ルールブロック（THICK_PAINT_BLOCK）が削除されている", () => {
-    expect(routersSource).not.toContain("THICK_PAINT_BLOCK");
+  it("DALL-E 3 images/generationsエンドポイントを使用している", () => {
+    expect(routersSource).toContain("images/generations");
   });
 
-  it("旧ルールブロック（MASTER_RULE）が削除されている", () => {
-    expect(routersSource).not.toContain("MASTER_RULE");
-  });
-});
-
-describe("5職業プロンプトの実装確認", () => {
-  it("Hero（勇者）プロンプトが定義されている", () => {
-    expect(routersSource).toContain("HERO_PROMPT");
-    expect(routersSource).toContain("chibi HERO");
-    expect(routersSource).toContain("Dragon Quest");
-  });
-
-  it("Priest（僧侶）プロンプトが定義されている", () => {
-    expect(routersSource).toContain("PRIEST_PROMPT");
-    expect(routersSource).toContain("chibi PRIEST");
-  });
-
-  it("Mage（魔法使い）プロンプトが定義されている", () => {
-    expect(routersSource).toContain("MAGE_PROMPT");
-    expect(routersSource).toContain("chibi MAGE");
-  });
-
-  it("DemonLord（魔王）プロンプトが定義されている", () => {
-    expect(routersSource).toContain("DEMON_LORD_PROMPT");
-    expect(routersSource).toContain("chibi DEMON LORD");
-  });
-
-  it("Swordsman（剣士）プロンプトが定義されている", () => {
-    expect(routersSource).toContain("SWORDSMAN_PROMPT");
-    expect(routersSource).toContain("chibi SWORDSMAN");
+  it("dall-e-3モデルを使用している", () => {
+    expect(routersSource).toContain("dall-e-3");
   });
 });
 
-describe("仕様書の重要指示が全プロンプトに含まれている", () => {
-  it("ポーズ維持の指示が含まれている（Hero）", () => {
-    expect(routersSource).toContain("Faithfully preserve the original pose");
+describe("v5: GPT-4o Visionによる特徴抽出", () => {
+  it("extractPersonFeatures関数が定義されている", () => {
+    expect(routersSource).toContain("extractPersonFeatures");
   });
 
-  it("顔の特徴保持の指示が含まれている（Hero）", () => {
-    expect(routersSource).toContain("Preserve facial structure, expression, eye shape");
+  it("GPT-4o visionモデルを使用している", () => {
+    expect(routersSource).toContain("gpt-4o");
   });
 
-  it("服の色継承の指示が含まれている（Hero）", () => {
-    expect(routersSource).toContain("strictly preserving the original clothing color palette");
-  });
-
-  it("背景は服の色から派生する指示が含まれている", () => {
-    expect(routersSource).toContain("derived from the dominant clothing color");
-  });
-
-  it("チビ比率の指示が含まれている", () => {
-    expect(routersSource).toContain("chibi proportion");
-  });
-
-  it("フォトリアリズム禁止が含まれている", () => {
-    expect(routersSource).toContain("Avoid photorealism");
+  it("写真をbase64でGPT-4oに送信している", () => {
+    expect(routersSource).toContain("image_url");
+    expect(routersSource).toContain("base64");
   });
 });
 
-describe("gpt-image-1 APIの使用確認", () => {
-  it("gpt-image-1モデルを使用している", () => {
-    expect(routersSource).toContain("gpt-image-1");
+describe("v5: buildDalle3Prompt関数の品質ルール", () => {
+  it("buildDalle3Prompt関数が定義されている", () => {
+    expect(routersSource).toContain("buildDalle3Prompt");
   });
 
-  it("images/editsエンドポイントを使用している", () => {
-    expect(routersSource).toContain("images/edits");
+  it("テキスト完全排除ルールが含まれている", () => {
+    expect(routersSource).toContain("NO text");
+    expect(routersSource).toContain("NO letters");
+    expect(routersSource).toContain("NO numbers");
+    expect(routersSource).toContain("NO watermark");
+    expect(routersSource).toContain("NO captions");
   });
 
-  it("写真をFormDataで送信している", () => {
-    expect(routersSource).toContain("multipart/form-data");
+  it("年齢・顔の固定ルールが含まれている", () => {
+    expect(routersSource).toContain("do NOT rejuvenate or idealize");
+    expect(routersSource).toContain("Preserve exact facial structure");
+  });
+
+  it("高品質厚塗りスタイルが含まれている", () => {
+    expect(routersSource).toContain("Masterpiece");
+    expect(routersSource).toContain("high-end TCG splash art");
+    expect(routersSource).toContain("Rich digital painting");
+    expect(routersSource).toContain("SSR game card quality");
+  });
+
+  it("Dragon Quest-style cosplay（服装限定）が含まれている", () => {
+    expect(routersSource).toContain("Dragon Quest-style cosplay outfit");
+  });
+});
+
+describe("v5: 5職業の定義", () => {
+  it("JOBSに5職業が定義されている", () => {
+    expect(routersSource).toContain("Hero");
+    expect(routersSource).toContain("Priest");
+    expect(routersSource).toContain("Mage");
+    expect(routersSource).toContain("DemonLord");
+    expect(routersSource).toContain("Swordsman");
+  });
+
+  it("各職業にJRPGアウトフィットが定義されている", () => {
+    expect(routersSource).toContain("JRPG hero");
+    expect(routersSource).toContain("JRPG healer");
+    expect(routersSource).toContain("JRPG mage");
+    expect(routersSource).toContain("JRPG demon lord");
+    expect(routersSource).toContain("JRPG warrior");
   });
 
   it("ランダム職業選択が実装されている", () => {
-    expect(routersSource).toContain("CHARACTER_KEYS");
     expect(routersSource).toContain("Math.random()");
+  });
+});
+
+describe("v5: DALL-E 3 パラメーター設定", () => {
+  it("quality: hdが設定されている", () => {
+    expect(routersSource).toContain('"hd"');
+  });
+
+  it("style: naturalが設定されている（元画像への忠実度優先）", () => {
+    expect(routersSource).toContain('"natural"');
+  });
+
+  it("response_format: b64_jsonが設定されている", () => {
+    expect(routersSource).toContain("b64_json");
+  });
+});
+
+describe("v5: 旧バージョンの残骸がない", () => {
+  it("NO_TEXT_BLOCKが削除されている", () => {
+    expect(routersSource).not.toContain("NO_TEXT_BLOCK");
+  });
+
+  it("AGE_ANCHOR_BLOCKが削除されている", () => {
+    expect(routersSource).not.toContain("AGE_ANCHOR_BLOCK");
+  });
+
+  it("THICK_PAINT_BLOCKが削除されている", () => {
+    expect(routersSource).not.toContain("THICK_PAINT_BLOCK");
+  });
+
+  it("MASTER_RULEが削除されている", () => {
+    expect(routersSource).not.toContain("MASTER_RULE");
+  });
+
+  it("HERO_PROMPT定数が削除されている（v5はJOBS配列に統合）", () => {
+    expect(routersSource).not.toContain("const HERO_PROMPT");
   });
 });
