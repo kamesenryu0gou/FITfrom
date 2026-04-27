@@ -1,23 +1,11 @@
 /**
  * routers.prompt.test.ts
  *
- * Verifies that the Likeness-First prompt structure is correctly applied
- * to all 5 character classes in the AI anime conversion feature.
- *
- * These tests do NOT call external APIs — they validate the prompt
- * construction logic by inspecting the exported CHARACTER_PROMPTS structure
- * via a white-box approach through the router module.
+ * Verifies the "Ultra-Precision Fantasy Illustration" prompt structure:
+ * 5 Absolute Rendering Rules applied to all character classes.
  */
 
 import { describe, it, expect } from "vitest";
-
-// We test the prompt logic by importing the module and checking the
-// generated prompt strings contain the required identity preservation markers.
-
-// Since CHARACTER_PROMPTS is not exported, we validate through the
-// card.convertToAnime procedure's input validation and the module structure.
-// The actual prompt content is validated by parsing the source file.
-
 import { readFileSync } from "fs";
 import { resolve } from "path";
 
@@ -26,33 +14,66 @@ const routersSource = readFileSync(
   "utf-8"
 );
 
-describe("Likeness-First Prompt Structure", () => {
-  it("contains the IDENTITY PRESERVATION RULE block", () => {
-    expect(routersSource).toContain("[IDENTITY PRESERVATION RULE]");
-    expect(routersSource).toContain("Primary Goal: Create a \"Stylized Anime Portrait\"");
-    expect(routersSource).toContain("Face Mapping (HIGHEST PRIORITY)");
-    expect(routersSource).toContain("Caricature Approach");
+describe("Ultra-Precision Fantasy Illustration — 5 Absolute Rules", () => {
+
+  it("RULE 1: Facial Expression Sync — exact expression mechanics required", () => {
+    expect(routersSource).toContain("FACIAL EXPRESSION SYNC");
+    expect(routersSource).toContain("RULE 1");
+    expect(routersSource).toContain("smile shape");
+    expect(routersSource).toContain("eye squint");
+    expect(routersSource).toContain("lip corner");
+    expect(routersSource).toContain("Not one pixel of the face");
   });
 
-  it("uses Semi-chibi instead of plain Chibi", () => {
-    expect(routersSource).toContain("Semi-chibi");
-    // Should NOT have standalone "chibi HERO" / "chibi PRIEST" etc. (old style)
-    expect(routersSource).not.toContain("chibi HERO");
-    expect(routersSource).not.toContain("chibi PRIEST");
-    expect(routersSource).not.toContain("chibi MAGE");
-    expect(routersSource).not.toContain("chibi DEMON");
-    expect(routersSource).not.toContain("chibi SWORDSMAN");
+  it("RULE 2: Object Translation — fantasy replacement logic present", () => {
+    expect(routersSource).toContain("OBJECT TRANSLATION");
+    expect(routersSource).toContain("RULE 2");
+    expect(routersSource).toContain("Elemental energy crystal");
+    expect(routersSource).toContain("Ancient spellbook");
+    expect(routersSource).toContain("Throne of the holy knight");
+    expect(routersSource).toContain("Crystal orb");
   });
 
-  it("uses Dragon Quest-style Cosplay/Outfit instead of Dragon Quest-inspired", () => {
-    expect(routersSource).toContain("Dragon Quest-style Cosplay/Outfit");
+  it("RULE 3: SSR Quality Standard — no cheap line art", () => {
+    expect(routersSource).toContain("SSR QUALITY STANDARD");
+    expect(routersSource).toContain("RULE 3");
+    expect(routersSource).toContain("High-end 2D game splash art");
+    expect(routersSource).toContain("Detailed fabric folds");
+    expect(routersSource).toContain("Soft global illumination");
+    expect(routersSource).toContain("digital painting");
+    expect(routersSource).toContain("NOT flat");
   });
 
-  it("sets DALL-E 3 style to natural for better likeness", () => {
-    expect(routersSource).toContain('style: "natural"');
+  it("RULE 4: Color Palette Inheritance — photo colors carried into costume", () => {
+    expect(routersSource).toContain("COLOR PALETTE INHERITANCE");
+    expect(routersSource).toContain("RULE 4");
+    expect(routersSource).toContain("dominant colors of the person");
+    expect(routersSource).toContain("PRIMARY colors of the fantasy costume");
+    expect(routersSource).toContain("warmth or coolness of the photo");
   });
 
-  it("contains all 5 character class prompts", () => {
+  it("RULE 5: Pose & Face Lock — zero deviation from photo", () => {
+    expect(routersSource).toContain("POSE & FACE LOCK");
+    expect(routersSource).toContain("RULE 5");
+    expect(routersSource).toContain("zero deviation");
+    expect(routersSource).toContain("non-negotiable");
+  });
+
+  it("MASTER_RULE shared constant is applied to all 5 character classes", () => {
+    expect(routersSource).toContain("const MASTER_RULE =");
+    const masterRuleUsageCount = (routersSource.match(/\$\{MASTER_RULE\}/g) || []).length;
+    expect(masterRuleUsageCount).toBe(5);
+  });
+
+  it("GPT-4o performs 6-axis analysis including expression and objects", () => {
+    expect(routersSource).toContain("AXIS 1: FACIAL EXPRESSION MECHANICS");
+    expect(routersSource).toContain("AXIS 4: HELD OBJECTS & BACKGROUND");
+    expect(routersSource).toContain("AXIS 5: COLOR PALETTE & WARMTH");
+    expect(routersSource).toContain("AXIS 6: POSE & BODY");
+    expect(routersSource).toContain("max_tokens: 1200");
+  });
+
+  it("all 5 character classes are defined", () => {
     expect(routersSource).toContain("Hero:");
     expect(routersSource).toContain("Priest:");
     expect(routersSource).toContain("Mage:");
@@ -60,26 +81,23 @@ describe("Likeness-First Prompt Structure", () => {
     expect(routersSource).toContain("Swordsman:");
   });
 
-  it("GPT-4o system prompt prioritizes facial identity", () => {
-    expect(routersSource).toContain("LIKENESS-FIRST analysis");
-    expect(routersSource).toContain("INSTANTLY RECOGNIZABLE");
-    expect(routersSource).toContain("FACE (HIGHEST PRIORITY)");
+  it("each class prompt specifies Object Translation for held items", () => {
+    // Each class should have its own object translation section
+    const objectTranslationCount = (routersSource.match(/Object Translation:/g) || []).length;
+    expect(objectTranslationCount).toBe(5);
   });
 
-  it("GPT-4o max_tokens increased to 900 for richer description", () => {
-    expect(routersSource).toContain("max_tokens: 900");
+  it("each class prompt specifies Color Palette Inherited from Photo", () => {
+    const colorInheritanceCount = (routersSource.match(/Color Palette Inherited from Photo/g) || []).length;
+    expect(colorInheritanceCount).toBe(5);
   });
 
-  it("IDENTITY_RULE is shared and applied to all character prompts", () => {
-    // The shared constant should appear once as a definition
-    expect(routersSource).toContain("const IDENTITY_RULE =");
-    // And be referenced in each character prompt template
-    const identityRuleUsageCount = (routersSource.match(/\$\{IDENTITY_RULE\}/g) || []).length;
-    expect(identityRuleUsageCount).toBe(5); // One per character class
+  it("DALL-E 3 uses style=natural for maximum likeness", () => {
+    expect(routersSource).toContain('style: "natural"');
   });
 
-  it("Likeness Over Style principle is stated", () => {
-    expect(routersSource).toContain("Likeness Over Style");
-    expect(routersSource).toContain("ALWAYS prioritize facial likeness");
+  it("SSR quality level is stated in each class prompt", () => {
+    const ssrCount = (routersSource.match(/SSR-tier 2D game splash art/g) || []).length;
+    expect(ssrCount).toBe(5);
   });
 });

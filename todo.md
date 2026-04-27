@@ -17,3 +17,4 @@
 - [x] 用紙サイズ（100×148.5mm、カード85.6×54mm、2面付）に合わせたダウンロード機能（上:1枚目、下:2枚目）
 - [x] ダウンロードボタンは作成ページ最下部に1つのみ配置
 - [x] AI似題絵精度向上：Likeness Firstロジックにプロンプト全面改修（IDENTITY PRESERVATION RULE・ Semi-chibi・Dragon Quest-style Cosplay/Outfit・DALL-E style=natural）
+- [x] 超精巧ファンタジーイラスト変換ロジック実装（表情同期・持ち物ファンタジー置換・SSRグラフィック品質・色彩継承・ポーズ固定の5要素をrouters.tsに反映）
