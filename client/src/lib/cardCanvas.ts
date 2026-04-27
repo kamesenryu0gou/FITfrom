@@ -310,3 +310,247 @@ export async function downloadCard(cardData: CardData): Promise<void> {
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
+
+// ── Dual-card sheet download ──────────────────────────────────────────────
+//
+// 用紙仕様（はがきサイズ 2面付き）:
+//   シートサイズ: 100 × 148.5 mm
+//   カードサイズ: 85.6 × 54 mm
+//   余白（左右）: 7.2 mm
+//   余白（上下）: 18 mm
+//   2面の間隔:   4.5 mm
+//
+// 出力解像度: 300 dpi
+//   1 mm = 300/25.4 ≈ 11.811 px
+//
+// シート全体 (px @ 300dpi):
+//   W = 100 × 11.811 ≈ 1181 px
+//   H = 148.5 × 11.811 ≈ 1754 px
+//
+// カード1枚 (px @ 300dpi):
+//   W = 85.6 × 11.811 ≈ 1011 px
+//   H = 54  × 11.811 ≈  638 px
+//
+// 配置:
+//   左余白 = 7.2 mm → 85 px
+//   上余白 = 18 mm → 213 px
+//   カード1 top = 213 px
+//   カード間 = 4.5 mm → 53 px
+//   カード2 top = 213 + 638 + 53 = 904 px
+
+const DPI = 300;
+const MM_TO_PX = DPI / 25.4;
+
+const SHEET_W_PX = Math.round(100 * MM_TO_PX);    // 1181
+const SHEET_H_PX = Math.round(148.5 * MM_TO_PX);  // 1754
+
+const CARD_SHEET_W = Math.round(85.6 * MM_TO_PX); // 1011
+const CARD_SHEET_H = Math.round(54 * MM_TO_PX);   // 638
+
+const MARGIN_LEFT = Math.round(7.2 * MM_TO_PX);   // 85
+const MARGIN_TOP  = Math.round(18 * MM_TO_PX);    // 213
+const CARD_GAP    = Math.round(4.5 * MM_TO_PX);   // 53
+
+/**
+ * Renders a single card at the exact pixel dimensions needed for the sheet.
+ * Uses the same layout ratios as renderCardToBlob but at CARD_SHEET_W × CARD_SHEET_H.
+ *
+ * Note: The card template images are portrait (638×1011).
+ * The sheet card slot is landscape (1011×638), so we rotate 90° CW.
+ */
+async function renderCardForSheet(
+  cardData: CardData,
+  ctx: CanvasRenderingContext2D,
+  offsetX: number,
+  offsetY: number
+): Promise<void> {
+  // We'll render the card portrait into a temporary canvas, then rotate onto sheet
+  const PORTRAIT_W = CARD_SHEET_H; // 638 px wide
+  const PORTRAIT_H = CARD_SHEET_W; // 1011 px tall
+
+  const tmpCanvas = document.createElement("canvas");
+  tmpCanvas.width = PORTRAIT_W;
+  tmpCanvas.height = PORTRAIT_H;
+  const tmpCtx = tmpCanvas.getContext("2d")!;
+
+  // Scale factor relative to the preview coordinate space (CARD_W=300, CARD_H=475)
+  const scaleX = PORTRAIT_W / CARD_W;
+  const scaleY = PORTRAIT_H / CARD_H;
+  tmpCtx.scale(scaleX, scaleY);
+
+  const colors = ELEMENT_COLORS[cardData.element];
+
+  // Layer 1: Base card image
+  const cardImg = await loadImage(CARD_IMAGES[cardData.element]);
+  tmpCtx.drawImage(cardImg, 0, 0, CARD_W, CARD_H);
+
+  // Layer 2: User photo
+  if (cardData.photoUrl) {
+    try {
+      const photoImg = await loadImage(cardData.photoUrl);
+      tmpCtx.save();
+      tmpCtx.beginPath();
+      tmpCtx.rect(BAR_LEFT, PHOTO_TOP, BAR_WIDTH, PHOTO_HEIGHT);
+      tmpCtx.clip();
+
+      const photoAspect = photoImg.width / photoImg.height;
+      const boxAspect   = BAR_WIDTH / PHOTO_HEIGHT;
+      let dw: number, dh: number, dx: number, dy: number;
+
+      if (photoAspect > boxAspect) {
+        dh = PHOTO_HEIGHT;
+        dw = PHOTO_HEIGHT * photoAspect;
+        dx = BAR_LEFT - (dw - BAR_WIDTH) / 2;
+        dy = PHOTO_TOP;
+      } else {
+        dw = BAR_WIDTH;
+        dh = BAR_WIDTH / photoAspect;
+        dx = BAR_LEFT;
+        dy = PHOTO_TOP;
+      }
+      tmpCtx.drawImage(photoImg, dx, dy, dw, dh);
+      tmpCtx.restore();
+    } catch {
+      // skip
+    }
+  }
+
+  // Layer 3: Text overlays (same as renderCardToBlob)
+  tmpCtx.textBaseline = "middle";
+
+  if (cardData.cardName) {
+    const len = cardData.cardName.length;
+    const fontSize = len > 6 ? 14 : len > 4 ? 16 : 19;
+    tmpCtx.font = `900 ${fontSize}px 'Noto Sans JP', sans-serif`;
+    tmpCtx.textAlign = "center";
+    drawOutlinedText(tmpCtx, cardData.cardName, BAR_LEFT + BAR_WIDTH / 2, UPPER_BAR_TOP + UPPER_BAR_HEIGHT / 2, "#ffffff", 3);
+  }
+
+  if (cardData.rarity) {
+    tmpCtx.font = `900 14px 'Noto Sans JP', sans-serif`;
+    tmpCtx.textAlign = "left";
+    drawOutlinedText(tmpCtx, cardData.rarity, BAR_LEFT + 4, RARITY_ROW_TOP + RARITY_ROW_HEIGHT / 2, "#ffd700", 2);
+  }
+
+  if (cardData.attack !== null) {
+    const atkY = RARITY_ROW_TOP + RARITY_ROW_HEIGHT / 2;
+    tmpCtx.font = `900 10px 'Noto Sans JP', sans-serif`;
+    tmpCtx.textAlign = "right";
+    drawOutlinedText(tmpCtx, "ATK", BAR_LEFT + BAR_WIDTH - 22, atkY, "#ffffff", 2);
+    tmpCtx.font = `900 18px 'Noto Sans JP', sans-serif`;
+    drawOutlinedText(tmpCtx, String(cardData.attack), BAR_LEFT + BAR_WIDTH - 2, atkY, colors.primary, 3);
+  }
+
+  if (cardData.ability) {
+    const badgeCY = PHOTO_TOP + PHOTO_HEIGHT + 4 + 7;
+    const badgeCX = BAR_LEFT + BAR_WIDTH / 2;
+    tmpCtx.font = `700 10px 'Noto Sans JP', sans-serif`;
+    tmpCtx.textAlign = "center";
+    const metrics = tmpCtx.measureText(cardData.ability);
+    const bw = metrics.width + 20;
+    const bh = 14;
+    tmpCtx.fillStyle = colors.primary + "cc";
+    tmpCtx.strokeStyle = colors.primary;
+    tmpCtx.lineWidth = 1;
+    tmpCtx.beginPath();
+    tmpCtx.roundRect(badgeCX - bw / 2, badgeCY - bh / 2, bw, bh, 7);
+    tmpCtx.fill();
+    tmpCtx.stroke();
+    drawOutlinedText(tmpCtx, cardData.ability, badgeCX, badgeCY, "#ffffff", 1.5, "rgba(0,0,0,0.7)");
+  }
+
+  const lowerMid = LOWER_BAR_TOP + LOWER_BAR_HEIGHT / 2;
+  const hasMove  = Boolean(cardData.specialMove);
+  const hasDesc  = Boolean(cardData.description);
+
+  if (hasMove && hasDesc) {
+    tmpCtx.font = `900 10px 'Noto Sans JP', sans-serif`;
+    tmpCtx.textAlign = "left";
+    drawOutlinedText(tmpCtx, `⚡ 必殺技：${cardData.specialMove}`, BAR_LEFT + 8, LOWER_BAR_TOP + LOWER_BAR_HEIGHT * 0.3, colors.primary, 2);
+    tmpCtx.font = `400 8px 'Noto Sans JP', sans-serif`;
+    drawOutlinedText(tmpCtx, cardData.description, BAR_LEFT + 8, LOWER_BAR_TOP + LOWER_BAR_HEIGHT * 0.72, "#ffffff", 2);
+  } else if (hasMove) {
+    tmpCtx.font = `900 10px 'Noto Sans JP', sans-serif`;
+    tmpCtx.textAlign = "left";
+    drawOutlinedText(tmpCtx, `⚡ 必殺技：${cardData.specialMove}`, BAR_LEFT + 8, lowerMid, colors.primary, 2);
+  } else if (hasDesc) {
+    tmpCtx.font = `400 8px 'Noto Sans JP', sans-serif`;
+    tmpCtx.textAlign = "left";
+    drawOutlinedText(tmpCtx, cardData.description, BAR_LEFT + 8, lowerMid, "#ffffff", 2);
+  }
+
+  // Rotate portrait card 90° CW and draw onto sheet canvas at (offsetX, offsetY)
+  // Rotation: translate to center of destination slot, rotate, draw centered
+  ctx.save();
+  ctx.translate(offsetX + CARD_SHEET_W / 2, offsetY + CARD_SHEET_H / 2);
+  ctx.rotate(Math.PI / 2); // 90° CW
+  // After rotation, portrait width becomes landscape height and vice versa
+  // Draw the portrait canvas centered
+  ctx.drawImage(tmpCanvas, -PORTRAIT_W / 2, -PORTRAIT_H / 2, PORTRAIT_W, PORTRAIT_H);
+  ctx.restore();
+}
+
+/**
+ * Generates a 2-up card sheet image (用紙サイズ 100×148.5mm @ 300dpi)
+ * and saves it to the user's device.
+ *
+ * Layout:
+ *   Top slot:    card1 (1枚目)
+ *   Bottom slot: card2 (2枚目)
+ */
+export async function downloadDualCard(card1: CardData, card2: CardData): Promise<void> {
+  const canvas = document.createElement("canvas");
+  canvas.width  = SHEET_W_PX;
+  canvas.height = SHEET_H_PX;
+  const ctx = canvas.getContext("2d")!;
+
+  // White background
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, SHEET_W_PX, SHEET_H_PX);
+
+  // Card 1 (top)
+  await renderCardForSheet(card1, ctx, MARGIN_LEFT, MARGIN_TOP);
+
+  // Card 2 (bottom)
+  const card2Top = MARGIN_TOP + CARD_SHEET_H + CARD_GAP;
+  await renderCardForSheet(card2, ctx, MARGIN_LEFT, card2Top);
+
+  // Export as PNG
+  const blob = await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (b) => { if (b) resolve(b); else reject(new Error("Canvas toBlob returned null")); },
+      "image/png"
+    );
+  });
+
+  const filename = "fitwars-card-sheet.png";
+  const file = new File([blob], filename, { type: "image/png" });
+
+  // Web Share API (mobile)
+  if (
+    typeof navigator.share === "function" &&
+    typeof navigator.canShare === "function" &&
+    navigator.canShare({ files: [file] })
+  ) {
+    try {
+      await navigator.share({
+        files: [file],
+        title: "FIT WARS カードシート",
+        text: "FIT WARS Card Maker — 2面付きカードシート",
+      });
+      return;
+    } catch (err) {
+      if ((err as Error).name === "AbortError") return;
+    }
+  }
+
+  // Fallback: anchor download
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}

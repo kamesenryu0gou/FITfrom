@@ -88,7 +88,8 @@ interface CardFormProps {
   updateCardData: (updates: Partial<CardData>) => void;
   onAIAnime: () => void;
   isGeneratingAI: boolean;
-  cardPreviewRef: React.RefObject<HTMLDivElement | null>;
+  cardPreviewRef?: React.RefObject<HTMLDivElement | null>;
+  hideDownload?: boolean;
 }
 
 // Load an image from URL and return HTMLImageElement
@@ -126,6 +127,7 @@ export default function CardForm({
   onAIAnime,
   isGeneratingAI,
   cardPreviewRef,
+  hideDownload = false,
 }: CardFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -512,8 +514,8 @@ export default function CardForm({
         </div>
       </div>
 
-      {/* Download Button */}
-      <button
+      {/* Download Button - hideDownload=trueの場合は非表示 */}
+      {!hideDownload && <button
         onClick={handleDownload}
         style={{
           width: "100%",
@@ -544,7 +546,7 @@ export default function CardForm({
         }}
       >
         📥 ダウンロードする
-      </button>
+      </button>}
 
       <style>{`
         @keyframes spin {
