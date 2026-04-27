@@ -6,264 +6,157 @@ import { z } from "zod";
 import { storagePut } from "./storage";
 
 /**
- * AI Anime Conversion — DQ風チビキャラ・5職業ランダム選択
+ * AI Anime Conversion — Semi-chibi JRPG Style · 5-Class Random
  *
  * Strategy:
- * 1. GPT-4o (high detail) analyzes the photo and produces an exhaustive
- *    physical + clothing description to maximize resemblance.
- * 2. DALL-E 3 (HD quality) receives one of 5 character prompts (Hero / Priest /
- *    Mage / Demon Lord / Swordsman) randomly selected, in Dragon Quest–inspired
- *    chibi JRPG style.
+ * 1. GPT-4o (high detail) performs a "Likeness-First" analysis:
+ *    face structure, hair, skin, body, clothing — with explicit instruction
+ *    to prioritize facial identity markers above all else.
+ * 2. DALL-E 3 (HD, style=natural) receives one of 5 character prompts
+ *    (Hero / Priest / Mage / Demon Lord / Swordsman) randomly selected.
+ *    Each prompt leads with the [IDENTITY PRESERVATION RULE] block,
+ *    uses "Dragon Quest-style Cosplay/Outfit" (outfit only, not face),
+ *    and "Semi-chibi" proportions to retain facial detail.
  */
 
-// ── 5 Character Prompts (from pasted_content.txt) ─────────────────────────
+// ── Shared Identity Preservation Rule ─────────────────────────────────────
+const IDENTITY_RULE = `[IDENTITY PRESERVATION RULE]
+Primary Goal: Create a "Stylized Anime Portrait" that is INSTANTLY RECOGNIZABLE as the specific person described below.
+
+Face Mapping (HIGHEST PRIORITY):
+- Maintain the EXACT eye shape, eyebrow thickness and arch, hairstyle, hair color, facial hair (if any), glasses (if any), and facial proportions of the original person.
+- Do NOT replace the face with a generic anime face. Instead, CONVERT the actual face features into the target art style while keeping ALL personal identifiers intact.
+- Caricature Approach: Amplify the most distinctive facial features (strong jaw, wide eyes, thick brows, etc.) to make the character MORE recognizable, not less.
+
+Likeness Over Style: If there is any conflict between "anime style" and "facial likeness", ALWAYS prioritize facial likeness. The outfit and background follow the style; the face follows the person.`;
+
+// ── 5 Character Prompts — Likeness First ──────────────────────────────────
 const CHARACTER_PROMPTS: Record<string, (description: string) => string> = {
-  Hero: (description: string) => `Using the following character description as reference, generate an isekai anime–style chibi HERO in a Dragon Quest–inspired illustration style with strong consistency.
 
-Character description (faithfully preserve ALL physical features, hair, skin tone, clothing colors):
+  Hero: (description: string) => `${IDENTITY_RULE}
+
+Character Description (extract and faithfully reproduce EVERY physical feature listed below):
 ${description}
 
-Art Style:
-Dragon Quest–inspired anime illustration style (classic JRPG fantasy look),
-clean and bold anime lineart, clear outlines,
-simple and readable shapes,
-soft cel shading with minimal gradients,
-bright but natural fantasy color tones,
-highly consistent and repeatable Japanese RPG character illustration style.
+Art Direction:
+- Style: Semi-chibi (stylized proportions but keeping full facial detail — NOT over-deformed)
+- Outfit: Dragon Quest-style Cosplay/Outfit — fantasy hero costume (light armor, cape, sword) applied ON TOP of the person's body. The OUTFIT follows the JRPG theme; the FACE follows the person.
+- Line art: Clean bold anime outlines, clear cel shading, minimal gradients
+- Color: Bright natural fantasy tones; preserve original clothing color palette exactly
+- Background: Simple flat color or soft gradient derived from dominant clothing color
 
-NOT copying or referencing any specific Dragon Quest character.
-No parody, no direct character resemblance.
-Original character design only, inspired by classic JRPG aesthetics.
+Pose & Proportions:
+- Slightly enlarged head relative to body (semi-chibi scale), but facial features remain detailed and true to the person
+- Preserve original pose, stance, and gesture from the description
+- Do NOT distort or over-simplify the face
 
-IMPORTANT – Style Consistency Rules:
-Use the exact same illustration style, line thickness, eye design,
-face proportions, and cel-shading method as all other character generations.
-Avoid stylistic randomness.
+Style Consistency:
+- Consistent JRPG illustration style across all generations
+- Same line thickness, eye rendering method, and cel-shading approach
+- Original character design only — NOT copying any existing Dragon Quest character
 
-Pose & Structure:
-– Faithfully preserve the original pose, body angle, arm position,
-  stance, and gesture from the description
-– Only adjust proportions to chibi scale without changing the pose
+Output: 1:1 square, centered, high-quality 2D anime illustration suitable for a trading card.
+Avoid photorealism, 3D rendering, western cartoon style, painterly textures, complex backgrounds.`,
 
-Character Design:
-– Slightly large head, small body (chibi proportion)
-– Do NOT over-exaggerate or deform the face
-– Preserve facial structure, expression, eye shape, and mouth shape
-– Maintain strong resemblance to the original person
+  Priest: (description: string) => `${IDENTITY_RULE}
 
-Outfit & Theme:
-Fantasy hero outfit inspired by classic JRPG / Dragon Quest–style heroes
-(light armor, cape, sword),
-while strictly preserving the original clothing color palette
-and overall visual impression from the description.
-
-Background:
-Simple flat color or soft gradient,
-derived from the dominant clothing color.
-
-Output:
-1:1 square format, centered character,
-clean anime lineart, soft cel shading,
-high-quality 2D Japanese RPG-style illustration.
-
-Avoid photorealism, 3D, western cartoon style, painterly textures.`,
-
-  Priest: (description: string) => `Using the following character description as reference, generate an isekai anime–style chibi PRIEST in a Dragon Quest–inspired illustration style with strong consistency.
-
-Character description (faithfully preserve ALL physical features, hair, skin tone, clothing colors):
+Character Description (extract and faithfully reproduce EVERY physical feature listed below):
 ${description}
 
-Art Style:
-Dragon Quest–inspired anime illustration style (classic JRPG fantasy look),
-clean and bold anime lineart, clear outlines,
-simple and readable shapes,
-soft cel shading with minimal gradients,
-bright but natural fantasy color tones,
-highly consistent and repeatable Japanese RPG character illustration style.
+Art Direction:
+- Style: Semi-chibi (stylized proportions but keeping full facial detail — NOT over-deformed)
+- Outfit: Dragon Quest-style Cosplay/Outfit — fantasy priest/healer costume (robe, staff, holy accessory) applied ON TOP of the person's body. The OUTFIT follows the JRPG theme; the FACE follows the person.
+- Line art: Clean bold anime outlines, clear cel shading, minimal gradients
+- Color: Bright natural fantasy tones; preserve original clothing color palette exactly
+- Background: Simple flat color or soft gradient derived from dominant clothing color
 
-NOT copying or referencing any specific Dragon Quest character.
-No parody, no direct character resemblance.
-Original character design only, inspired by classic JRPG aesthetics.
+Pose & Proportions:
+- Slightly enlarged head relative to body (semi-chibi scale), but facial features remain detailed and true to the person
+- Preserve original pose, posture, and calm expression from the description
+- Gentle and warm impression while matching the original face exactly
 
-IMPORTANT – Style Consistency Rules:
-Use the exact same illustration style, facial proportions,
-eye design, and shading method as previous generations.
+Style Consistency:
+- Consistent JRPG illustration style across all generations
+- Same line thickness, eye rendering method, and cel-shading approach
+- Original character design only — NOT copying any existing Dragon Quest character
 
-Pose & Structure:
-– Accurately preserve the original pose, posture,
-  arm position, and body direction from the description
-– Convert only into chibi proportions without altering the pose
+Output: 1:1 square, centered, consistent JRPG game-icon quality.
+Avoid realism, 3D rendering, dramatic lighting, over-simplified faces.`,
 
-Character Design:
-– Chibi proportions with restrained deformation
-– Preserve facial expression and likeness as closely as possible
-– Gentle and calm impression while matching the original face
+  Mage: (description: string) => `${IDENTITY_RULE}
 
-Outfit & Theme:
-Fantasy priest / healer outfit (robe, staff, holy accessory),
-in classic JRPG / Dragon Quest–style design,
-while preserving the original clothing colors and balance.
-
-Background:
-Minimal flat or soft gradient background,
-color derived from the dominant clothing color.
-
-Output:
-1:1 square, centered,
-clean anime lineart, soft cel shading,
-consistent JRPG game-icon quality.
-
-Avoid realism, 3D rendering, dramatic lighting.`,
-
-  Mage: (description: string) => `Using the following character description as reference, generate an isekai anime–style chibi MAGE in a Dragon Quest–inspired illustration style with strong consistency.
-
-Character description (faithfully preserve ALL physical features, hair, skin tone, clothing colors):
+Character Description (extract and faithfully reproduce EVERY physical feature listed below):
 ${description}
 
-Art Style:
-Dragon Quest–inspired anime illustration style (classic JRPG fantasy look),
-clean and bold anime lineart, clear outlines,
-simple and readable shapes,
-soft cel shading with minimal gradients,
-bright but natural fantasy color tones,
-highly consistent and repeatable Japanese RPG character illustration style.
+Art Direction:
+- Style: Semi-chibi (stylized proportions but keeping full facial detail — NOT over-deformed)
+- Outfit: Dragon Quest-style Cosplay/Outfit — fantasy mage costume (robe, pointed hat, magic staff, subtle magic effects) applied ON TOP of the person's body. The OUTFIT follows the JRPG theme; the FACE follows the person.
+- Line art: Clean bold anime outlines, clear cel shading, minimal gradients
+- Color: Bright natural fantasy tones; preserve original clothing color palette exactly
+- Background: Simple flat color or soft gradient derived from dominant clothing color
 
-NOT copying or referencing any specific Dragon Quest character.
-No parody, no direct character resemblance.
-Original character design only, inspired by classic JRPG aesthetics.
+Pose & Proportions:
+- Slightly enlarged head relative to body (semi-chibi scale), but facial features remain detailed and true to the person
+- Maintain original pose, silhouette, hand position, and body orientation from the description
+- Do NOT distort or over-simplify the face
 
-IMPORTANT – Style Consistency Rules:
-Use the same drawing style, line weight,
-eye design, and shading method every time.
+Style Consistency:
+- Consistent JRPG illustration style across all generations
+- Same line thickness, eye rendering method, and cel-shading approach
+- Original character design only — NOT copying any existing Dragon Quest character
 
-Pose & Structure:
-– Maintain the original pose, silhouette,
-  hand position, and body orientation from the description
-– Apply chibi proportions without changing the pose
+Output: 1:1 square, centered, polished 2D anime illustration.
+Avoid photorealism, 3D, painterly styles, generic anime faces.`,
 
-Character Design:
-– Slightly large head, small body
-– Do NOT distort or exaggerate facial features
-– Preserve eye shape, mouth shape, and expression
+  DemonLord: (description: string) => `${IDENTITY_RULE}
 
-Outfit & Theme:
-Fantasy mage outfit (robe, hat, magic staff, subtle magic effects),
-in a classic JRPG / Dragon Quest–inspired design,
-while keeping the original clothing color palette and impression.
-
-Background:
-Simple, clean flat or gradient background,
-derived from the dominant clothing color.
-
-Output:
-1:1 square, centered composition,
-soft cel shading, polished 2D anime illustration.
-
-Avoid photorealism, 3D, painterly styles.`,
-
-  DemonLord: (description: string) => `Using the following character description as reference, generate an isekai anime–style chibi DEMON LORD in a Dragon Quest–inspired illustration style with strong consistency.
-
-Character description (faithfully preserve ALL physical features, hair, skin tone, clothing colors):
+Character Description (extract and faithfully reproduce EVERY physical feature listed below):
 ${description}
 
-IMPORTANT – Style Consistency Rules:
-Use the exact same illustration style,
-face proportions, eye design,
-and shading method as previous generations.
+Art Direction:
+- Style: Semi-chibi (stylized proportions but keeping full facial detail — NOT over-deformed)
+- Outfit: Dragon Quest-style Cosplay/Outfit — fantasy demon lord costume (dark cloak, decorative horns or crown, subtle magical aura) applied ON TOP of the person's body. The OUTFIT follows the JRPG theme; the FACE follows the person.
+- Line art: Clean bold anime outlines, clear cel shading, minimal gradients
+- Color: Bright natural fantasy tones with dark accents; preserve original clothing color palette exactly
+- Background: Simple flat color or soft gradient derived from dominant clothing color
 
-Art Style:
-Dragon Quest–inspired anime illustration style (classic JRPG fantasy look),
-clean and bold anime lineart, clear outlines,
-simple and readable shapes,
-soft cel shading with minimal gradients,
-bright but natural fantasy color tones,
-highly consistent and repeatable Japanese RPG character illustration style.
+Pose & Proportions:
+- Slightly enlarged head relative to body (semi-chibi scale), but facial features remain detailed and true to the person
+- Preserve original pose, stance, and gesture; slightly confident or intense expression
+- Slightly intimidating but still cute and stylized — do NOT make grotesque
 
-NOT copying or referencing any specific Dragon Quest character.
-No parody, no direct character resemblance.
-Original character design only, inspired by classic JRPG aesthetics.
+Style Consistency:
+- Consistent JRPG illustration style across all generations
+- Same line thickness, eye rendering method, and cel-shading approach
+- Original character design only — NOT copying any existing Dragon Quest character
 
-Pose & Structure:
-– Preserve the original pose, stance,
-  body direction, and gesture from the description
-– Convert into chibi proportions without altering pose dynamics
+Output: 1:1 square, centered, polished 2D Japanese RPG illustration.
+Avoid realism, 3D, grotesque or horror elements, over-simplified faces.`,
 
-Character Design:
-– Chibi proportions with controlled deformation
-– Preserve facial structure and expression
-– Slightly intimidating but still cute and stylized
+  Swordsman: (description: string) => `${IDENTITY_RULE}
 
-Outfit & Theme:
-Fantasy demon lord outfit
-(dark cloak, horns or crown, subtle magical aura),
-classic JRPG / Dragon Quest–style fantasy design,
-while retaining the original clothing color palette
-and overall impression.
-
-Background:
-Simple flat or gradient background,
-derived from the dominant clothing color.
-
-Output:
-1:1 square, centered,
-clean anime lineart, soft cel shading,
-polished 2D Japanese RPG illustration.
-
-Avoid realism, 3D, grotesque or horror elements.`,
-
-  Swordsman: (description: string) => `Using the following character description as reference, generate an isekai anime–style chibi SWORDSMAN in a Dragon Quest–inspired illustration style with strong consistency.
-
-Character description (faithfully preserve ALL physical features, hair, skin tone, clothing colors):
+Character Description (extract and faithfully reproduce EVERY physical feature listed below):
 ${description}
 
-Art Style:
-Dragon Quest–inspired anime illustration style (classic JRPG fantasy look),
-clean and bold anime lineart, clear outlines,
-simple and readable shapes,
-soft cel shading with minimal gradients,
-bright but natural fantasy color tones,
-highly consistent and repeatable Japanese RPG character illustration style.
+Art Direction:
+- Style: Semi-chibi (stylized proportions but keeping full facial detail — NOT over-deformed)
+- Outfit: Dragon Quest-style Cosplay/Outfit — fantasy swordsman costume (light armor, leather gear, sword or dual blades) applied ON TOP of the person's body. The OUTFIT follows the JRPG theme; the FACE follows the person.
+- Line art: Clean bold anime outlines, clear cel shading, minimal gradients
+- Color: Bright natural fantasy tones; preserve original clothing color palette exactly
+- Background: Simple flat color or soft gradient derived from dominant clothing color
 
-NOT copying or referencing any specific Dragon Quest character.
-No parody, no direct character resemblance.
-Original character design only, inspired by classic JRPG aesthetics.
+Pose & Proportions:
+- Slightly enlarged head relative to body (semi-chibi scale), but facial features remain detailed and true to the person
+- Faithfully preserve original pose, stance, body angle, arm position, and gesture from the description
+- Maintain strong resemblance to the original person — do NOT replace face with generic anime face
 
-IMPORTANT – Style Consistency Rules:
-Use the exact same illustration style, line thickness,
-face proportions, eye design,
-and cel-shading method as previous character generations
-Avoid stylistic randomness.
+Style Consistency:
+- Consistent JRPG illustration style across all generations
+- Same line thickness, eye rendering method, and cel-shading approach
+- Original character design only — NOT copying any existing Dragon Quest character
 
-Pose & Structure:
-– Faithfully preserve the original pose, stance,
-  body angle, arm position, and gesture from the description
-– Convert only into chibi proportions without changing the pose dynamics
-
-Character Design:
-– Slightly large head, small body (chibi proportion)
-– Controlled deformation: do NOT exaggerate or distort the face
-– Preserve facial structure, eye shape, mouth shape, and expression
-– Maintain strong resemblance to the original person
-
-Outfit & Theme:
-Fantasy swordsman outfit inspired by classic JRPG / Dragon Quest–style warriors
-(light armor, leather gear, sword or dual blades),
-while strictly preserving the original clothing color palette
-and overall visual impression from the description.
-
-Background:
-Simple flat color or soft gradient background,
-derived from and harmonized with the dominant clothing color.
-
-Output:
-1:1 square composition, centered character,
-clean anime lineart, soft cel shading,
-high-quality 2D Japanese RPG chibi illustration
-suitable for icons or character sets.
-
-Avoid photorealism, 3D rendering,
-painterly textures, western cartoon styles,
-complex or detailed backgrounds.`,
+Output: 1:1 square, centered, high-quality 2D Japanese RPG semi-chibi illustration suitable for trading card icons.
+Avoid photorealism, 3D rendering, painterly textures, western cartoon styles, complex backgrounds.`,
 };
 
 const CHARACTER_KEYS = Object.keys(CHARACTER_PROMPTS);
@@ -276,7 +169,7 @@ async function generateAnimeCharacter(options: {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not configured");
 
-  // ── Step 1: GPT-4o detailed physical + clothing analysis ───────────────
+  // ── Step 1: GPT-4o Likeness-First facial + physical analysis ──────────
   const visionResponse = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -285,13 +178,15 @@ async function generateAnimeCharacter(options: {
     },
     body: JSON.stringify({
       model: "gpt-4o",
-      max_tokens: 700,
+      max_tokens: 900,
       messages: [
         {
           role: "system",
           content:
-            "You are an expert anime character designer specializing in Japanese trading card game art. " +
-            "Analyze photos with extreme precision to capture every physical detail needed for a faithful anime likeness.",
+            "You are an expert forensic portrait artist and anime character designer. " +
+            "Your PRIMARY job is to extract every facial identity marker from a photo with maximum precision, " +
+            "so that a downstream image AI can recreate the person's face in anime style while keeping them INSTANTLY RECOGNIZABLE. " +
+            "Prioritize face and hair details above all else. Never omit or generalize facial features.",
         },
         {
           role: "user",
@@ -305,45 +200,56 @@ async function generateAnimeCharacter(options: {
             },
             {
               type: "text",
-              text: `Analyze this person in exhaustive detail for creating a highly faithful anime trading card character.
+              text: `Perform a LIKENESS-FIRST analysis of this person for anime character conversion.
 
-Provide ALL of the following with maximum specificity:
+Your output will be used directly as a reference for an AI image generator. Be EXTREMELY specific — vague descriptions produce generic faces. Every detail you capture increases the chance the result looks like this specific person.
 
-FACE STRUCTURE:
-- Face shape (oval / round / square / heart / diamond / oblong)
-- Eye shape (almond / round / monolid / hooded / upturned / downturned) and color (be exact: dark brown / hazel green / light blue / etc.)
-- Eyebrow thickness and arch (thin arched / thick straight / bushy / etc.)
-- Nose shape (button / aquiline / flat / narrow / wide)
-- Lip shape (thin / full / heart-shaped / wide)
-- Distinctive facial features: dimples, freckles, strong jawline, high cheekbones, cleft chin, etc.
-- Approximate age range and gender expression
+=== FACE (HIGHEST PRIORITY) ===
+1. Face shape: (oval / round / square / heart / diamond / oblong — be precise)
+2. Eyes:
+   - Shape: (almond / round / monolid / hooded / upturned / downturned / deep-set)
+   - Size: (small / medium / large relative to face)
+   - Color: (exact shade — jet black / dark brown / warm hazel / green / light blue / etc.)
+   - Double eyelid or monolid?
+   - Any distinctive features (droopy, sharp corners, etc.)
+3. Eyebrows:
+   - Thickness: (thin / medium / thick / very thick)
+   - Shape: (straight / arched / curved / angular)
+   - Color relative to hair
+4. Nose: (button / aquiline / flat / narrow / wide / upturned — be specific)
+5. Lips: (thin / medium / full; shape: heart / wide / straight)
+6. Jaw & chin: (strong / soft / pointed / square / rounded / cleft chin)
+7. Cheekbones: (high / low / prominent / soft)
+8. DISTINCTIVE FEATURES (critical — list ALL): dimples, moles, freckles, scars, strong brow ridge, deep-set eyes, prominent ears, etc.
+9. Facial hair: (none / stubble / beard — color and style)
+10. Age impression and gender expression
 
-HAIR:
-- Exact color (jet black / dark brown / chestnut / auburn / dirty blonde / platinum / silver / etc.)
+=== HAIR (HIGH PRIORITY) ===
+- Exact color (jet black / dark brown / chestnut / auburn / dirty blonde / platinum / silver / dyed color)
 - Length (very short / short / medium / long / very long)
-- Style in detail (straight and smooth / wavy / curly / spiky / undercut / side-swept / tied back in ponytail / bun / braids / bangs: yes/no and style)
-- Texture (fine / thick / voluminous / flat)
+- Style in precise detail (straight / wavy / curly / spiky / undercut / side-swept / parted left/right / tied back / bangs: yes/no and exact style)
+- Volume and texture (fine / thick / voluminous / flat / frizzy)
 
-SKIN:
+=== SKIN ===
 - Tone (fair porcelain / light ivory / medium beige / warm tan / olive / deep brown / rich dark)
-- Undertone if visible (warm / cool / neutral)
+- Undertone (warm / cool / neutral)
 
-BODY:
+=== BODY ===
 - Build (slim / lean athletic / average / stocky / muscular / plus-size)
-- Approximate height impression (petite / average / tall)
+- Height impression (petite / average / tall)
 
-CLOTHING (describe every visible item):
-- Top: exact color(s), garment type (t-shirt / hoodie / jacket / shirt / dress / etc.), any visible patterns, logos, graphics, or text
+=== CLOTHING (describe every visible item precisely) ===
+- Top: exact color(s), garment type, any patterns/logos/graphics
 - Bottom if visible: color, type
 - Outerwear if any
-- Accessories: glasses (frame style and color), earrings, necklace, hat/cap (color and style), watch, etc.
+- Accessories: glasses (frame shape and color — CRITICAL if present), earrings, necklace, hat/cap, watch, etc.
 - Overall style vibe (casual / sporty / formal / streetwear / etc.)
 
-EXPRESSION & POSE:
-- Current facial expression
-- Any notable posture or gesture
+=== EXPRESSION & POSE ===
+- Current facial expression (neutral / smiling / serious / etc.)
+- Notable posture or gesture
 
-Be extremely specific — every detail will be used to draw an anime character that is immediately recognizable as this person.`,
+REMINDER: The goal is that someone reading your description can draw this EXACT person in anime style and it will be immediately recognizable as them. Do not generalize. Do not omit.`,
             },
           ],
         },
@@ -363,7 +269,9 @@ Be extremely specific — every detail will be used to draw an anime character t
   const randomKey = CHARACTER_KEYS[Math.floor(Math.random() * CHARACTER_KEYS.length)];
   const dallePrompt = CHARACTER_PROMPTS[randomKey](personDescription);
 
-  // ── Step 3: DALL-E 3 HD generation ────────────────────────────────────
+  // ── Step 3: DALL-E 3 HD generation (style=natural for max likeness) ───
+  // style="natural" prioritizes faithfulness to the prompt description
+  // over artistic interpretation, which improves facial resemblance.
   const dalleResponse = await fetch("https://api.openai.com/v1/images/generations", {
     method: "POST",
     headers: {
@@ -376,6 +284,7 @@ Be extremely specific — every detail will be used to draw an anime character t
       n: 1,
       size: "1024x1024",
       quality: "hd",
+      style: "natural",        // "natural" > "vivid" for facial likeness
       response_format: "b64_json",
     }),
   });
