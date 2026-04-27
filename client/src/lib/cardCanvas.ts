@@ -314,50 +314,50 @@ export async function downloadCard(cardData: CardData): Promise<void> {
 // ── Dual-card sheet download ──────────────────────────────────────────────
 //
 // 用紙仕様（はがきサイズ 2面付き）:
-//   シートサイズ: 100 × 148.5 mm
-//   カードサイズ: 85.6 × 54 mm（横向き・ランドスケープ、用紙に2枚縦に並べる）
-//   カードテンプレートは縦向きなので、配置時に90°回転する
+//   用紙サイズ: 148.5 × 100 mm（landscape）
+//   カードサイズ: 54 × 85.6 mm（縦向き・portrait）を横に2枚並べる
+//   回転なし（カードテンプレートは縦向きのままシートに配置）
 //
-// 配置計算（横向きカードを用紙に2枚縦に並べる）:
-//   カード幅 = 85.6mm → 1011px
-//   カード高 = 54mm  →  638px
-//   左余白 = (100 - 85.6) / 2 = 7.2mm → 85px
-//   上余白 = (148.5 - 54×2) / 2 = 20.25mm → 239px
-//   カード間隔 = 0mm（隔隔なし）
-//   カード1 top = 239px
-//   カード2 top = 239 + 638 = 877px
+// 配置計算（縦向きカードを用紙に2枚横に並べる）:
+//   カード幅 = 54mm  →  638px
+//   カード高 = 85.6mm → 1011px
+//   上余白 = 18mm → 213px
+//   左余白 = 7.2mm → 85px
+//   カード間隔 = 4.5mm → 53px
+//   カード1 left = 85px
+//   カード2 left = 85 + 638 + 53 = 776px
 //
 // 出力解像度: 300 dpi
 //   1 mm = 300/25.4 ≈ 11.811 px
 //
 // シート全体 (px @ 300dpi):
-//   W = 100 × 11.811 ≈ 1181 px
-//   H = 148.5 × 11.811 ≈ 1754 px
+//   W = 148.5 × 11.811 ≈ 1754 px
+//   H = 100 × 11.811 ≈ 1181 px
 
 const DPI = 300;
 const MM_TO_PX = DPI / 25.4;
 
-const SHEET_W_PX = Math.round(100 * MM_TO_PX);    // 1181
-const SHEET_H_PX = Math.round(148.5 * MM_TO_PX);  // 1754
+// 用紙はlandscape（横向き）: 148.5mm × 100mm
+const SHEET_W_PX = Math.round(148.5 * MM_TO_PX);  // 1754 px
+const SHEET_H_PX = Math.round(100 * MM_TO_PX);    // 1181 px
 
-// カードは横向き（landscape）で配置: 85.6mm幅 × 54mm高さ
-// カードテンプレートは縦向きなので、renderCardForSheet内で回転する
-const CARD_SHEET_W = Math.round(85.6 * MM_TO_PX); // 1011 px（横向きカードの幅）
-const CARD_SHEET_H = Math.round(54 * MM_TO_PX);   //  638 px（横向きカードの高さ）
+// カードは縦向き（portrait）のまま配置: 54mm幅 × 85.6mm高さ
+const CARD_SHEET_W = Math.round(54 * MM_TO_PX);   //  638 px（縦向きカードの幅）
+const CARD_SHEET_H = Math.round(85.6 * MM_TO_PX); // 1011 px（縦向きカードの高さ）
 
-// 左余白: (100 - 85.6) / 2 = 7.2mm → 中央揃え
-const MARGIN_LEFT = Math.round((100 - 85.6) / 2 * MM_TO_PX); // 85 px
-// 上余白: (148.5 - 54×2) / 2 = 20.25mm
-const MARGIN_TOP  = Math.round((148.5 - 54 * 2) / 2 * MM_TO_PX); // 239 px
-const CARD_GAP    = 0; // カード間隔なし（隔隔なしで用紙に収まる）
+// 上余白: 18mm
+const MARGIN_TOP  = Math.round(18 * MM_TO_PX);    // 213 px
+// 左余白: 7.2mm
+const MARGIN_LEFT = Math.round(7.2 * MM_TO_PX);   //  85 px
+// カード間隔: 4.5mm
+const CARD_GAP    = Math.round(4.5 * MM_TO_PX);   //  53 px
 
 /**
  * Renders a single card at the exact pixel dimensions needed for the sheet.
  * Uses the same layout ratios as renderCardToBlob but at CARD_SHEET_W × CARD_SHEET_H.
  *
  * カードテンプレート画像は縦向き（portrait: CARD_W=300, CARD_H=475）。
- * シート上は横向き（landscape）で配置するため、一時キャンバスに縦向きで描画してから
- * 90°回転してシートに貼り付ける。
+ * シート上も縦向きのまま配置（回転なし）。
  */
 async function renderCardForSheet(
   cardData: CardData,
@@ -365,11 +365,10 @@ async function renderCardForSheet(
   offsetX: number,
   offsetY: number
 ): Promise<void> {
-  // 一時キャンバスは縦向き（portrait）で描画
-  // CARD_SHEET_W=1011px（横向き時の幅）, CARD_SHEET_H=638px（横向き時の高さ）
-  // 縦向きキャンバスは幅と高さを入れ替える
-  const PORTRAIT_W = CARD_SHEET_H; // 638 px（縦向きカードの幅）
-  const PORTRAIT_H = CARD_SHEET_W; // 1011 px（縦向きカードの高さ）
+  // カードは縦向き（portrait）のまま描画
+  // CARD_SHEET_W=638px（縦向きカードの幅）, CARD_SHEET_H=1011px（縦向きカードの高さ）
+  const PORTRAIT_W = CARD_SHEET_W; // 638 px
+  const PORTRAIT_H = CARD_SHEET_H; // 1011 px
 
   const tmpCanvas = document.createElement("canvas");
   tmpCanvas.width = PORTRAIT_W;
@@ -482,22 +481,17 @@ async function renderCardForSheet(
     drawOutlinedText(tmpCtx, cardData.description, BAR_LEFT + 8, lowerMid, "#ffffff", 2);
   }
 
-  // 縦向きキャンバスを横向きに90°回転してシートに貼り付ける
-  // 回転後: 幅=CARD_SHEET_W(1011px), 高さ=CARD_SHEET_H(638px)
-  ctx.save();
-  ctx.translate(offsetX + CARD_SHEET_W / 2, offsetY + CARD_SHEET_H / 2);
-  ctx.rotate(Math.PI / 2); // 90° CW
-  ctx.drawImage(tmpCanvas, -PORTRAIT_W / 2, -PORTRAIT_H / 2, PORTRAIT_W, PORTRAIT_H);
-  ctx.restore();
+  // 縦向きのままシートに貼り付ける（回転なし）
+  ctx.drawImage(tmpCanvas, offsetX, offsetY, PORTRAIT_W, PORTRAIT_H);
 }
 
 /**
- * Generates a 2-up card sheet image (用紙サイズ 100×148.5mm @ 300dpi)
+ * Generates a 2-up card sheet image (用紙サイズ 148.5×100mm @ 300dpi, landscape)
  * and saves it to the user's device.
  *
  * Layout:
- *   Top slot:    card1 (1枚目)
- *   Bottom slot: card2 (2枚目)
+ *   Left slot:  card1 (1枚目)
+ *   Right slot: card2 (2枚目)
  */
 export async function downloadDualCard(card1: CardData, card2: CardData): Promise<void> {
   const canvas = document.createElement("canvas");
@@ -509,12 +503,12 @@ export async function downloadDualCard(card1: CardData, card2: CardData): Promis
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, SHEET_W_PX, SHEET_H_PX);
 
-  // Card 1 (top)
+  // Card 1 (left)
   await renderCardForSheet(card1, ctx, MARGIN_LEFT, MARGIN_TOP);
 
-  // Card 2 (bottom)
-  const card2Top = MARGIN_TOP + CARD_SHEET_H + CARD_GAP;
-  await renderCardForSheet(card2, ctx, MARGIN_LEFT, card2Top);
+  // Card 2 (right)
+  const card2Left = MARGIN_LEFT + CARD_SHEET_W + CARD_GAP;
+  await renderCardForSheet(card2, ctx, card2Left, MARGIN_TOP);
 
   // Export as PNG
   const blob = await new Promise<Blob>((resolve, reject) => {

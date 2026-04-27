@@ -415,10 +415,10 @@ export default function Home() {
               fontFamily: "'Noto Sans JP', sans-serif",
             }}
           >
-            用紙サイズ（100×148.5mm）に合わせた2面付き画像を生成します
+            用紙サイズ（148.5×100mm）に合わせた2面付き画像を生成します
             <br />
             <span style={{ color: "#5a5a6a", fontSize: "11px" }}>
-              上：1枚目カード　下：2枚目カード
+              左：1枚目カード　右：2枚目カード
             </span>
           </p>
           <button
