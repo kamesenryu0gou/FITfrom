@@ -1,10 +1,7 @@
 /**
  * routers.prompt.test.ts
  *
- * Verifies the 3 Critical Fixes applied to the AI image generation prompts:
- * FIX 1: STRICT NO TEXT — no letters/numbers/captions in generated image
- * FIX 2: STOP AGE REDUCTION — mature adult male (late 30s–50s) enforced
- * FIX 3: HIGH-END TCG THICK PAINT — rich digital painting quality
+ * v4 Clean Reset — 仕様書（pasted_content_2.txt）のプロンプトが正しく実装されているか検証
  */
 
 import { describe, it, expect } from "vitest";
@@ -16,137 +13,93 @@ const routersSource = readFileSync(
   "utf-8"
 );
 
-describe("Critical Fix 1: STRICT NO TEXT — zero text in generated image", () => {
-  it("NO_TEXT_BLOCK constant is defined", () => {
-    expect(routersSource).toContain("const NO_TEXT_BLOCK =");
-    expect(routersSource).toContain("PURE ARTWORK ONLY");
+describe("Clean Reset: 仕様書のプロンプトが正しく実装されている", () => {
+  it("旧ルールブロック（NO_TEXT_BLOCK）が削除されている", () => {
+    expect(routersSource).not.toContain("NO_TEXT_BLOCK");
   });
 
-  it("explicitly forbids alphabet letters in image", () => {
-    expect(routersSource).toContain("Any alphabet letters");
-    expect(routersSource).toContain("A-Z, a-z");
+  it("旧ルールブロック（AGE_ANCHOR_BLOCK）が削除されている", () => {
+    expect(routersSource).not.toContain("AGE_ANCHOR_BLOCK");
   });
 
-  it("explicitly forbids numbers in image", () => {
-    expect(routersSource).toContain("Any numbers (0-9)");
+  it("旧ルールブロック（THICK_PAINT_BLOCK）が削除されている", () => {
+    expect(routersSource).not.toContain("THICK_PAINT_BLOCK");
   });
 
-  it("explicitly forbids captions and watermarks", () => {
-    expect(routersSource).toContain("captions");
-    expect(routersSource).toContain("watermarks");
-  });
-
-  it("NO TEXT rule applied to all 5 character prompts via MASTER_RULE", () => {
-    expect(routersSource).toContain("NO TEXT anywhere in the image");
-    // Count per-class "NO TEXT" statements (one per class prompt)
-    const noTextCount = (routersSource.match(/NO TEXT anywhere in the image/g) || []).length;
-    expect(noTextCount).toBe(5);
-  });
-
-  it("NO_TEXT_BLOCK is included in MASTER_RULE", () => {
-    expect(routersSource).toContain("${NO_TEXT_BLOCK}");
+  it("旧ルールブロック（MASTER_RULE）が削除されている", () => {
+    expect(routersSource).not.toContain("MASTER_RULE");
   });
 });
 
-describe("Critical Fix 2: STOP AGE REDUCTION — mature adult male enforced", () => {
-  it("AGE_ANCHOR_BLOCK constant is defined", () => {
-    expect(routersSource).toContain("const AGE_ANCHOR_BLOCK =");
-    expect(routersSource).toContain("CRITICAL AGE & MATURITY RULE");
+describe("5職業プロンプトの実装確認", () => {
+  it("Hero（勇者）プロンプトが定義されている", () => {
+    expect(routersSource).toContain("HERO_PROMPT");
+    expect(routersSource).toContain("chibi HERO");
+    expect(routersSource).toContain("Dragon Quest");
   });
 
-  it("specifies late 30s to 50s age range", () => {
-    expect(routersSource).toContain("late 30s to 50s");
+  it("Priest（僧侶）プロンプトが定義されている", () => {
+    expect(routersSource).toContain("PRIEST_PROMPT");
+    expect(routersSource).toContain("chibi PRIEST");
   });
 
-  it("forbids making character look younger", () => {
-    expect(routersSource).toContain("Making the character look younger than the photo");
+  it("Mage（魔法使い）プロンプトが定義されている", () => {
+    expect(routersSource).toContain("MAGE_PROMPT");
+    expect(routersSource).toContain("chibi MAGE");
   });
 
-  it("forbids enlarging eyes beyond adult proportions", () => {
-    expect(routersSource).toContain("Enlarging the eyes beyond natural adult proportions");
+  it("DemonLord（魔王）プロンプトが定義されている", () => {
+    expect(routersSource).toContain("DEMON_LORD_PROMPT");
+    expect(routersSource).toContain("chibi DEMON LORD");
   });
 
-  it("forbids removing or softening facial hair", () => {
-    expect(routersSource).toContain("Removing or softening facial hair");
-  });
-
-  it("forbids slimming jaw or chin", () => {
-    expect(routersSource).toContain("Slimming the jaw or chin");
-  });
-
-  it("each class prompt explicitly states subject is NOT a teenager", () => {
-    const notTeenagerCount = (routersSource.match(/He is NOT a teenager/g) || []).length;
-    expect(notTeenagerCount).toBe(5);
-  });
-
-  it("GPT-4o system prompt anchors subject as mature adult male", () => {
-    expect(routersSource).toContain("MATURE ADULT MALE (late 30s to 50s)");
-    expect(routersSource).toContain("do NOT say young or teenage");
-  });
-
-  it("GPT-4o analysis explicitly requests facial hair description", () => {
-    expect(routersSource).toContain("FACIAL HAIR (CRITICAL)");
-    expect(routersSource).toContain("stubble (density, length, color)");
+  it("Swordsman（剣士）プロンプトが定義されている", () => {
+    expect(routersSource).toContain("SWORDSMAN_PROMPT");
+    expect(routersSource).toContain("chibi SWORDSMAN");
   });
 });
 
-describe("Critical Fix 3: HIGH-END TCG THICK PAINT — rich digital painting quality", () => {
-  it("THICK_PAINT_BLOCK constant is defined", () => {
-    expect(routersSource).toContain("const THICK_PAINT_BLOCK =");
-    expect(routersSource).toContain("HIGH-END TCG DIGITAL PAINTING");
+describe("仕様書の重要指示が全プロンプトに含まれている", () => {
+  it("ポーズ維持の指示が含まれている（Hero）", () => {
+    expect(routersSource).toContain("Faithfully preserve the original pose");
   });
 
-  it("specifies rich thick digital painting style", () => {
-    expect(routersSource).toContain("Rich, thick digital painting");
-    expect(routersSource).toContain("NOT flat anime cel shading");
+  it("顔の特徴保持の指示が含まれている（Hero）", () => {
+    expect(routersSource).toContain("Preserve facial structure, expression, eye shape");
   });
 
-  it("specifies fabric texture requirements", () => {
-    expect(routersSource).toContain("Visible weave, cloth weight, fold shadows");
+  it("服の色継承の指示が含まれている（Hero）", () => {
+    expect(routersSource).toContain("strictly preserving the original clothing color palette");
   });
 
-  it("specifies skin subsurface scattering", () => {
-    expect(routersSource).toContain("Subsurface scattering");
+  it("背景は服の色から派生する指示が含まれている", () => {
+    expect(routersSource).toContain("derived from the dominant clothing color");
   });
 
-  it("specifies metal texture requirements", () => {
-    expect(routersSource).toContain("Specular highlights, scratches, engraving details");
+  it("チビ比率の指示が含まれている", () => {
+    expect(routersSource).toContain("chibi proportion");
   });
 
-  it("forbids cheap flat line art", () => {
-    expect(routersSource).toContain("Cheap flat line art");
-  });
-
-  it("specifies grand fantasy landscape background", () => {
-    expect(routersSource).toContain("Grand fantasy landscape");
+  it("フォトリアリズム禁止が含まれている", () => {
+    expect(routersSource).toContain("Avoid photorealism");
   });
 });
 
-describe("All 3 fixes integrated into MASTER_RULE and applied to all 5 classes", () => {
-  it("MASTER_RULE includes all 3 fix blocks", () => {
-    expect(routersSource).toContain("${NO_TEXT_BLOCK}");
-    expect(routersSource).toContain("${AGE_ANCHOR_BLOCK}");
-    expect(routersSource).toContain("${THICK_PAINT_BLOCK}");
+describe("gpt-image-1 APIの使用確認", () => {
+  it("gpt-image-1モデルを使用している", () => {
+    expect(routersSource).toContain("gpt-image-1");
   });
 
-  it("MASTER_RULE is applied to all 5 character classes", () => {
-    const masterRuleCount = (routersSource.match(/\$\{MASTER_RULE\}/g) || []).length;
-    expect(masterRuleCount).toBe(5);
+  it("images/editsエンドポイントを使用している", () => {
+    expect(routersSource).toContain("images/edits");
   });
 
-  it("all 5 character classes are present", () => {
-    expect(routersSource).toContain("Hero:");
-    expect(routersSource).toContain("Priest:");
-    expect(routersSource).toContain("Mage:");
-    expect(routersSource).toContain("DemonLord:");
-    expect(routersSource).toContain("Swordsman:");
+  it("写真をFormDataで送信している", () => {
+    expect(routersSource).toContain("multipart/form-data");
   });
 
-  it("DALL-E 3 uses style=natural for maximum likeness", () => {
-    expect(routersSource).toContain('style: "natural"');
-  });
-
-  it("DALL-E 3 uses HD quality", () => {
-    expect(routersSource).toContain('quality: "hd"');
+  it("ランダム職業選択が実装されている", () => {
+    expect(routersSource).toContain("CHARACTER_KEYS");
+    expect(routersSource).toContain("Math.random()");
   });
 });

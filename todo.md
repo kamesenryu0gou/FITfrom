@@ -19,3 +19,4 @@
 - [x] AI似題絵精度向上：Likeness Firstロジックにプロンプト全面改修（IDENTITY PRESERVATION RULE・ Semi-chibi・Dragon Quest-style Cosplay/Outfit・DALL-E style=natural）
 - [x] 超精巧ファンタジーイラスト変換ロジック実装（表情同期・持ち物ファンタジー置換・SSRグラフィック品質・色彩継承・ポーズ固定の5要素をrouters.tsに反映）
 - [x] AI画像生成の致命的欠陥修正：文字完全禁止（STRICT NO TEXT）・別人化停止（年齢30代後半〜50代の大人の男性として固定）・厚塗りスタイル強制適用（High-End TCG Style）の3点をrouters.tsに実装
+- [x] AI加工設定を全てクリーンリセットし、仕様書（pasted_content_2.txt）の5職業プロンプトをそのまま使用したDQ風チビキャラ変換ロジックに完全置き換え（PDFサンプル画像のような品質を目標）
