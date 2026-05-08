@@ -354,6 +354,68 @@ async function generateAnimeCharacter(options: {
   throw new Error("No image data returned from gpt-image-1");
 }
 
+// ── License Maker: Cars-style 3D character conversion ─────────────────────────
+const LICENSE_CARS_PROMPT = `Transform the person in this photo into a 3D animated character from the Disney movie "Wreck-It Ralph" (Sugar Rush style) while strictly maintaining the facial features and likeness of the original photo. The AI must preserve the person's unique facial structure, eyes, and expression to ensure they remain recognizable. Replace the clothing with a stylized racing suit with a candy theme: glossy texture, donut-shaped shoulder pads, and icing stripes. Style: High-quality 3D Pixar-style rendering with vibrant pastel colors. Background: A candy-themed race track.`;
+
+async function generateLicenseCharacter(options: {
+  photoBase64: string;
+  mimeType: string;
+}): Promise<string> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error("OPENAI_API_KEY is not configured");
+
+  let safeBase64 = options.photoBase64;
+  let safeMimeType = "image/jpeg";
+  try {
+    const inputBuffer = Buffer.from(options.photoBase64, "base64");
+    const jpegBuffer = await sharp(inputBuffer).jpeg({ quality: 90 }).toBuffer();
+    safeBase64 = jpegBuffer.toString("base64");
+    safeMimeType = "image/jpeg";
+  } catch {
+    const mimeType = options.mimeType || "image/jpeg";
+    safeMimeType = ["image/jpeg", "image/png", "image/webp"].includes(mimeType) ? mimeType : "image/jpeg";
+    safeBase64 = options.photoBase64;
+  }
+
+  const dataUrl = `data:${safeMimeType};base64,${safeBase64}`;
+
+  const editResponse = await fetch("https://api.openai.com/v1/images/edits", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "gpt-image-1",
+      prompt: LICENSE_CARS_PROMPT,
+      images: [{ image_url: dataUrl }],
+      n: 1,
+      size: "1024x1024",
+      quality: "high",
+    }),
+  });
+
+  if (!editResponse.ok) {
+    const err = await editResponse.json().catch(() => ({})) as { error?: { message?: string } };
+    throw new Error(`gpt-image-1 edit error: ${err?.error?.message || editResponse.status}`);
+  }
+
+  const editData = await editResponse.json() as { data?: Array<{ b64_json?: string; url?: string }> };
+  const b64 = editData.data?.[0]?.b64_json;
+  const imageUrl = editData.data?.[0]?.url;
+
+  if (b64) {
+    const buffer = Buffer.from(b64, "base64");
+    const { url } = await storagePut(`license-converted/${Date.now()}.png`, buffer, "image/png");
+    return url;
+  } else if (imageUrl) {
+    const imgRes = await fetch(imageUrl);
+    if (!imgRes.ok) throw new Error("Failed to download generated image");
+    const imgBuffer = Buffer.from(await imgRes.arrayBuffer());
+    const { url } = await storagePut(`license-converted/${Date.now()}.png`, imgBuffer, "image/png");
+    return url;
+  }
+
+  throw new Error("No image data returned from gpt-image-1");
+}
+
 export const appRouter = router({
   system: systemRouter,
   auth: router({
@@ -363,6 +425,23 @@ export const appRouter = router({
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
       return { success: true } as const;
     }),
+  }),
+
+  license: router({
+    convertToCarStyle: publicProcedure
+      .input(
+        z.object({
+          photoBase64: z.string().min(1),
+          mimeType: z.string().default("image/jpeg"),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const imageUrl = await generateLicenseCharacter({
+          photoBase64: input.photoBase64,
+          mimeType: input.mimeType,
+        });
+        return { imageUrl };
+      }),
   }),
 
   card: router({

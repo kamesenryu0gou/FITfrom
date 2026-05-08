@@ -138,6 +138,16 @@ export default function LandingPage() {
           <img src={LOGO_URL} alt="FIT WARS" className="h-10 md:h-14 object-contain" style={{ filter: "drop-shadow(0 0 8px rgba(204,255,0,0.4))" }} />
         </a>
         <div className="flex items-center ml-auto gap-3">
+          {/* ホームへ戻るボタン */}
+          <button
+            onClick={() => setLocation("/")}
+            className="hidden lg:flex items-center gap-1 px-3 py-2 border border-white/20 rounded text-white/60 hover:text-white hover:border-white/50 transition-colors text-xs font-semibold"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M19 12H5M12 5l-7 7 7 7" />
+            </svg>
+            HOME
+          </button>
           <nav className="hidden lg:flex items-center gap-6 mr-4">
             {[
               { id: "service", label: "FIT WARSとは" },
