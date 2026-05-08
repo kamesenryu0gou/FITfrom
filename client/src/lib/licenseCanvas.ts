@@ -285,8 +285,8 @@ export async function renderLicenseCardToBlob(
  *   シートサイズ: 100 × 148.5 mm @ 300dpi → 1181 × 1754 px
  *   カードサイズ: 85.6 × 54 mm → 1011 × 638 px
  *   左余白: 7.2mm → 85px
- *   上余白: 13.5mm → 159px
- *   カード間隔: 13.5mm → 159px
+ *   上余白: 18mm → 213px（JP-ID03N実測値）
+ *   カード間隔: 4.5mm → 53px（JP-ID03N実測値）
  */
 export async function renderLicenseSheetToBlob(
   data1: LicenseData,
@@ -303,10 +303,10 @@ export async function renderLicenseSheetToBlob(
   const CARD_SHEET_W = Math.round(85.6 * MM); // 1011 px
   const CARD_SHEET_H = Math.round(54 * MM);   //  638 px
 
-  // 余白（JP-ID03N仕様通り）
+  // 余白（JP-ID03N実測値）
   const MARGIN_LEFT = Math.round(7.2 * MM);   //  85 px
-  const MARGIN_TOP  = Math.round(13.5 * MM);  // 159 px
-  const CARD_GAP    = Math.round(13.5 * MM);  // 159 px
+  const MARGIN_TOP  = Math.round(18.0 * MM);  // 213 px
+  const CARD_GAP    = Math.round(4.5 * MM);   //  53 px
 
   // カードテンプレート(CARD_W=1075, CARD_H=650)をシートカードサイズに入るスケール
   // CARD_SHEET_W / CARD_W = 1011 / 1075 ≈ 0.940

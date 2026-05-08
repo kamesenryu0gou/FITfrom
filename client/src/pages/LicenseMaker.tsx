@@ -466,9 +466,9 @@ const CARD_PX_H = Math.round(54 * MM);    // 638px
 const FIT_SCALE = CARD_PX_W / CARD_W;  // 1011/1075 ≈ 0.9405
 const SCALED_W = Math.round(CARD_W * FIT_SCALE);
 const SCALED_H = Math.round(CARD_H * FIT_SCALE);
-const MARGIN_TOP = Math.round(13.5 * MM);
-const MARGIN_L   = Math.round(7.2 * MM);
-const GAP        = Math.round(13.5 * MM);
+const MARGIN_TOP = Math.round(18.0 * MM);  // 213px（JP-ID03N実測値）
+const MARGIN_L   = Math.round(7.2 * MM);   //  85px
+const GAP        = Math.round(4.5 * MM);   //  53px（JP-ID03N実測値）
 
 function loadImg(src: string): Promise<HTMLImageElement> {
   return new Promise((res, rej) => {

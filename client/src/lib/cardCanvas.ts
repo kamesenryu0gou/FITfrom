@@ -322,10 +322,10 @@ export async function downloadCard(cardData: CardData): Promise<void> {
 //   カード幅 = 85.6mm → 1011px
 //   カード高 = 54mm  →  638px
 //   左余白 = (100 - 85.6) / 2 = 7.2mm → 85px
-//   上余白 = (148.5 - 54×2) / 3 = 13.5mm → 159px
-//   カード間隔 = 13.5mm → 159px
-//   カード1 top = 159px
-//   カード2 top = 159 + 638 + 159 = 956px
+//   上余白 = 18mm → 213px（JP-ID03N実測値）
+//   カード間隔 = 4.5mm → 53px（JP-ID03N実測値）
+//   カード1 top = 213px
+//   カード2 top = 213 + 638 + 53 = 904px
 //
 // 90°回転の方法:
 //   縦向きカード(CARD_W=300, CARD_H=475)を時計回り90°回転
@@ -343,12 +343,12 @@ const SHEET_H_PX = Math.round(148.5 * MM_TO_PX);  // 1754 px
 const CARD_SHEET_W = Math.round(85.6 * MM_TO_PX); // 1011 px（カードの幅）
 const CARD_SHEET_H = Math.round(54 * MM_TO_PX);   //  638 px（カードの高さ）
 
-// 左余白: (100 - 85.6) / 2 = 7.2mm（左右均等）
+// 左余白: 7.2mm（JP-ID03N実測値）
 const MARGIN_LEFT = Math.round(7.2 * MM_TO_PX);   //  85 px
-// 上余白: (148.5 - 54×2) / 3 = 13.5mm
-const MARGIN_TOP  = Math.round(13.5 * MM_TO_PX);  // 159 px
-// カード間隔: 13.5mm（上余白と同じ）
-const CARD_GAP    = Math.round(13.5 * MM_TO_PX);  // 159 px
+// 上余白: 18mm（JP-ID03N実測値）
+const MARGIN_TOP  = Math.round(18.0 * MM_TO_PX);  // 213 px
+// カード間隔: 4.5mm（JP-ID03N実測値）
+const CARD_GAP    = Math.round(4.5 * MM_TO_PX);   //  53 px
 
 /**
  * Renders a single card at the exact pixel dimensions needed for the sheet.
