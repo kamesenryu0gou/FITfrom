@@ -381,28 +381,7 @@ function LicenseCardPreview({ data }: { data: LicenseData }) {
         }}>{data.dream}</span>
       </div>
 
-      {/* 発行(免許メーカー): y=558〜603, x=165〜680
-          top=85.8%, h=6.9%, left=15.3%, w=47.9% */}
-      <div style={{
-        position: "absolute",
-        top: "85.8%",
-        left: "15.3%",
-        width: "47.9%",
-        height: "6.9%",
-        display: "flex",
-        alignItems: "center",
-        overflow: "hidden",
-        padding: "0 4px",
-      }}>
-        <span style={{
-          fontSize: "clamp(7px, 1.6vw, 13px)",
-          fontWeight: 600,
-          color: "#1a1a2e",
-          fontFamily: "'M PLUS Rounded 1c','Noto Sans JP',sans-serif",
-          whiteSpace: "nowrap",
-          lineHeight: 1,
-        }}>免許メーカー</span>
-      </div>
+      {/* 発行(免許メーカー): 非表示（プレビューから削除） */}
     </div>
   );
 }
