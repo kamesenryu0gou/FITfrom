@@ -144,7 +144,8 @@ function CropModal({
   );
 }
 
-// ── License Card Preview（台紙ベース・正確な座標） ─────────────────────────────
+// ── License Card Preview（台紙ベース・Canvasと同一座標系） ──────────────────────
+// Canvas座標系（CARD_W=1011px, CARD_H=638px）と同じ%値を使用
 function LicenseCardPreview({ data }: { data: LicenseData }) {
   const displayPhoto = data.aiPhotoUrl || data.photoUrl;
   const formatDate = (d: string) => {
@@ -157,38 +158,38 @@ function LicenseCardPreview({ data }: { data: LicenseData }) {
     <div style={{ position: "relative", width: "100%", maxWidth: "520px", margin: "0 auto" }}>
       <img src={LICENSE_CARD_BASE_URL} alt="免許証台紙" style={{ width: "100%", display: "block", borderRadius: "12px" }} />
 
-      {/* 名前 — 名前ラベルの右横: left=18.6%, top=3.8%, w=79%, h=6.2% */}
-      <div style={{ position: "absolute", top: "3.8%", left: "18.6%", width: "79%", height: "6.2%", display: "flex", alignItems: "center", padding: "0 12px", overflow: "hidden" }}>
-        <span style={{ fontSize: "clamp(11px, 2.2vw, 18px)", fontWeight: 700, color: "#1a1a2e", fontFamily: "'M PLUS Rounded 1c','Noto Sans JP',sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>{data.nickname}</span>
+      {/* 名前 — Canvas: ox+W*0.186, oy+H*0.116 → left=18.6%, top=11.6% */}
+      <div style={{ position: "absolute", top: "9.0%", left: "18.6%", width: "42.8%", height: "9.2%", display: "flex", alignItems: "center", padding: "0 8px", overflow: "hidden" }}>
+        <span style={{ fontSize: "clamp(11px, 2.5vw, 20px)", fontWeight: 700, color: "#1a1a2e", fontFamily: "'M PLUS Rounded 1c','Noto Sans JP',sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>{data.nickname}</span>
       </div>
 
-      {/* 長所 — left=18.6%, top=20.0%, w=42.8%, h=5.4% */}
-      <div style={{ position: "absolute", top: "20.0%", left: "18.6%", width: "42.8%", height: "5.4%", display: "flex", alignItems: "center", padding: "0 12px", overflow: "hidden" }}>
-        <span style={{ fontSize: "clamp(10px, 1.9vw, 15px)", fontWeight: 600, color: "#1a1a2e", fontFamily: "'M PLUS Rounded 1c','Noto Sans JP',sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>{data.strength}</span>
+      {/* 長所 — Canvas: ox+W*0.186, oy+H*0.224 → left=18.6%, top=22.4% */}
+      <div style={{ position: "absolute", top: "19.8%", left: "18.6%", width: "42.8%", height: "9.2%", display: "flex", alignItems: "center", padding: "0 8px", overflow: "hidden" }}>
+        <span style={{ fontSize: "clamp(10px, 2.2vw, 17px)", fontWeight: 600, color: "#1a1a2e", fontFamily: "'M PLUS Rounded 1c','Noto Sans JP',sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>{data.strength}</span>
       </div>
 
-      {/* 日付 — left=18.6%, top=25.4%, w=42.8%, h=5.4% */}
-      <div style={{ position: "absolute", top: "25.4%", left: "18.6%", width: "42.8%", height: "5.4%", display: "flex", alignItems: "center", padding: "0 12px", overflow: "hidden" }}>
-        <span style={{ fontSize: "clamp(10px, 1.9vw, 14px)", fontWeight: 600, color: "#1a1a2e", fontFamily: "'M PLUS Rounded 1c','Noto Sans JP',sans-serif", whiteSpace: "nowrap" }}>{formatDate(data.date)}</span>
+      {/* 日付 — Canvas: ox+W*0.186, oy+H*0.285 → left=18.6%, top=28.5% */}
+      <div style={{ position: "absolute", top: "26.0%", left: "18.6%", width: "42.8%", height: "9.2%", display: "flex", alignItems: "center", padding: "0 8px", overflow: "hidden" }}>
+        <span style={{ fontSize: "clamp(10px, 2.0vw, 16px)", fontWeight: 600, color: "#1a1a2e", fontFamily: "'M PLUS Rounded 1c','Noto Sans JP',sans-serif", whiteSpace: "nowrap" }}>{formatDate(data.date)}</span>
       </div>
 
-      {/* 約束 — 優良の下・左寄せ: left=2.3%, top=50%, w=59%, h=25% */}
-      <div style={{ position: "absolute", top: "50%", left: "2.3%", width: "59%", height: "25%", display: "flex", alignItems: "flex-start", justifyContent: "flex-start", padding: "8px 12px", overflow: "hidden" }}>
-        <span style={{ fontSize: "clamp(9px, 1.7vw, 13px)", fontWeight: 600, color: "#1a1a2e", fontFamily: "'M PLUS Rounded 1c','Noto Sans JP',sans-serif", lineHeight: 1.6, wordBreak: "break-all", display: "-webkit-box", WebkitLineClamp: 5, WebkitBoxOrient: "vertical", overflow: "hidden" } as React.CSSProperties}>{data.promise}</span>
+      {/* 約束 — Canvas: ox+W*0.023, oy+H*0.525 → left=2.3%, top=52.5% */}
+      <div style={{ position: "absolute", top: "50.0%", left: "2.3%", width: "59%", height: "25%", display: "flex", alignItems: "flex-start", justifyContent: "flex-start", padding: "4px 8px", overflow: "hidden" }}>
+        <span style={{ fontSize: "clamp(9px, 1.9vw, 14px)", fontWeight: 600, color: "#1a1a2e", fontFamily: "'M PLUS Rounded 1c','Noto Sans JP',sans-serif", lineHeight: 1.5, wordBreak: "break-all", display: "-webkit-box", WebkitLineClamp: 5, WebkitBoxOrient: "vertical", overflow: "hidden" } as React.CSSProperties}>{data.promise}</span>
       </div>
 
-      {/* 将来の夢 — left=18.6%, top=75.4%, w=42.8%, h=6.2% */}
-      <div style={{ position: "absolute", top: "75.4%", left: "18.6%", width: "42.8%", height: "6.2%", display: "flex", alignItems: "center", padding: "0 12px", overflow: "hidden" }}>
-        <span style={{ fontSize: "clamp(9px, 1.7vw, 14px)", fontWeight: 600, color: "#1a1a2e", fontFamily: "'M PLUS Rounded 1c','Noto Sans JP',sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>{data.dream}</span>
+      {/* 将来の夢 — Canvas: ox+W*0.186, oy+H*0.800 → left=18.6%, top=80.0% */}
+      <div style={{ position: "absolute", top: "77.5%", left: "18.6%", width: "42.8%", height: "9.2%", display: "flex", alignItems: "center", padding: "0 8px", overflow: "hidden" }}>
+        <span style={{ fontSize: "clamp(9px, 2.0vw, 15px)", fontWeight: 600, color: "#1a1a2e", fontFamily: "'M PLUS Rounded 1c','Noto Sans JP',sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>{data.dream}</span>
       </div>
 
-      {/* 発行 — left=18.6%, top=81.5%, w=42.8%, h=6.2% */}
-      <div style={{ position: "absolute", top: "81.5%", left: "18.6%", width: "42.8%", height: "6.2%", display: "flex", alignItems: "center", padding: "0 12px", overflow: "hidden" }}>
-        <span style={{ fontSize: "clamp(9px, 1.7vw, 13px)", fontWeight: 600, color: "#1a1a2e", fontFamily: "'M PLUS Rounded 1c','Noto Sans JP',sans-serif", whiteSpace: "nowrap" }}>免許メーカー</span>
+      {/* 発行 — Canvas: ox+W*0.186, oy+H*0.846 → left=18.6%, top=84.6% */}
+      <div style={{ position: "absolute", top: "82.0%", left: "18.6%", width: "42.8%", height: "9.2%", display: "flex", alignItems: "center", padding: "0 8px", overflow: "hidden" }}>
+        <span style={{ fontSize: "clamp(9px, 1.8vw, 14px)", fontWeight: 600, color: "#1a1a2e", fontFamily: "'M PLUS Rounded 1c','Noto Sans JP',sans-serif", whiteSpace: "nowrap" }}>免許メーカー</span>
       </div>
 
-      {/* 写真 — 右側縦長: left=61.4%, top=25.4%, w=36.3%, h=62.3% */}
-      <div style={{ position: "absolute", top: "25.4%", left: "61.4%", width: "36.3%", height: "62.3%", overflow: "hidden", borderRadius: "4px" }}>
+      {/* 写真 — Canvas: ox+W*0.595, oy+H*0.080, w=W*0.341, h=H*0.852 → left=59.5%, top=8.0%, w=34.1%, h=85.2% */}
+      <div style={{ position: "absolute", top: "8.0%", left: "59.5%", width: "34.1%", height: "85.2%", overflow: "hidden", borderRadius: "4px" }}>
         {displayPhoto ? (
           <img src={displayPhoto} alt="photo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         ) : (
