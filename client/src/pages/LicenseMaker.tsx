@@ -251,13 +251,13 @@ function LicenseCardPreview({ data }: { data: LicenseData }) {
         ) : null}
       </div>
 
-      {/* 名前: y=46〜100, x=200〜680（中央やや左から左揃え）
-          top=7.1%, h=8.3%, left=18.6%(200/1075), w=44.7%(480/1075) */}
+      {/* 名前: y=46〜100, x=273〜680（200+73px）
+          top=7.1%, h=8.3%, left=25.4%(273/1075), w=37.9%(407/1075) */}
       <div style={{
         position: "absolute",
         top: "7.1%",
-        left: "18.6%",
-        width: "44.7%",
+        left: "25.4%",
+        width: "37.9%",
         height: "8.3%",
         display: "flex",
         alignItems: "center",
@@ -278,13 +278,13 @@ function LicenseCardPreview({ data }: { data: LicenseData }) {
         }}>{data.nickname}</span>
       </div>
 
-      {/* 長所: y=141〜183, x=200〜680（ニックネームと同じ横座標）
-          top=21.7%, h=6.5%, left=18.6%(200/1075), w=44.7%(480/1075) */}
+      {/* 長所: y=141〜183, x=273〜680（200+73px）
+          top=21.7%, h=6.5%, left=25.4%(273/1075), w=37.9%(407/1075) */}
       <div style={{
         position: "absolute",
         top: "21.7%",
-        left: "18.6%",
-        width: "44.7%",
+        left: "25.4%",
+        width: "37.9%",
         height: "6.5%",
         display: "flex",
         alignItems: "center",
@@ -305,13 +305,13 @@ function LicenseCardPreview({ data }: { data: LicenseData }) {
         }}>{data.strength}</span>
       </div>
 
-      {/* 日付: y=183〜228, x=200〜680（長所と同じ横座標）
-          top=28.2%, h=6.9%, left=18.6%(200/1075), w=44.7%(480/1075) */}
+      {/* 日付: y=183〜228, x=273〜680（200+73px）
+          top=28.2%, h=6.9%, left=25.4%(273/1075), w=37.9%(407/1075) */}
       <div style={{
         position: "absolute",
         top: "28.2%",
-        left: "18.6%",
-        width: "44.7%",
+        left: "25.4%",
+        width: "37.9%",
         height: "6.9%",
         display: "flex",
         alignItems: "center",
@@ -358,13 +358,13 @@ function LicenseCardPreview({ data }: { data: LicenseData }) {
         } as React.CSSProperties}>{data.promise}</span>
       </div>
 
-      {/* 将来の夢: y=516〜558, x=195〜680（現在位置から右に2文字分≈30px）
-          top=79.4%, h=6.5%, left=18.1%(195/1075), w=45.1%(485/1075) */}
+      {/* 将来の夢: y=516〜558, x=215〜680（195+20px）
+          top=79.4%, h=6.5%, left=20.0%(215/1075), w=43.3%(465/1075) */}
       <div style={{
         position: "absolute",
         top: "79.4%",
-        left: "18.1%",
-        width: "45.1%",
+        left: "20.0%",
+        width: "43.3%",
         height: "6.5%",
         display: "flex",
         alignItems: "center",
@@ -385,14 +385,14 @@ function LicenseCardPreview({ data }: { data: LicenseData }) {
         }}>{data.dream}</span>
       </div>
 
-      {/* 発行(免許メーカー): 将来の夢と同じ横軸(x=195)、発行行の縦軸(y=558〜603)
-          top=85.8%(558/650), h=6.9%(45/650), left=18.1%(195/1075), w=45.1%(485/1075)
+      {/* 発行(免許メーカー): 将来の夢と同じ横軸(x=215)、発行行の縦軸(y=558〜603)
+          top=85.8%(558/650), h=6.9%(45/650), left=20.0%(215/1075), w=43.3%(465/1075)
           将来の夢と同じフォントサイズ・固定テキスト「免許メーカー」 */}
       <div style={{
         position: "absolute",
         top: "85.8%",
-        left: "18.1%",
-        width: "45.1%",
+        left: "20.0%",
+        width: "43.3%",
         height: "6.9%",
         display: "flex",
         alignItems: "center",
@@ -421,15 +421,15 @@ const CARD_W  = 1075;
 const CARD_H  = 650;
 
 // 各フィールドの座標（実測値）
-const NAME_X    = 200;   // 名前入力開始 x（中央やや左から左揃え）
+const NAME_X    = 273;   // 名前入力開始 x（200+73px）
 const NAME_Y1   = 46;    // 名前行上端
 const NAME_Y2   = 100;   // 名前行下端
 
-const KYOSHO_X  = 200;   // 長所入力開始 x（ニックネームと同じ横座標）
+const KYOSHO_X  = 273;   // 長所入力開始 x（200+73px）
 const KYOSHO_Y1 = 141;   // 長所行上端
 const KYOSHO_Y2 = 183;   // 長所行下端
 
-const DATE_X    = 200;   // 日付入力開始 x（長所と同じ横座標）
+const DATE_X    = 273;   // 日付入力開始 x（200+73px）
 const DATE_Y1   = 183;   // 日付行上端
 const DATE_Y2   = 228;   // 日付行下端
 
@@ -437,11 +437,11 @@ const YAKUSOKU_X  = 30;  // 約束入力開始 x（左端から）
 const YAKUSOKU_Y1 = 370; // 約束エリア上端（優良ボックス下端 y=366の下）
 const YAKUSOKU_Y2 = 516; // 約束エリア下端
 
-const YUME_X    = 195;   // 将来の夢入力開始 x（現在位置から右に2文字分≈30px）
+const YUME_X    = 215;   // 将来の夢入力開始 x（195+20px）
 const YUME_Y1   = 516;   // 将来の夢行上端
 const YUME_Y2   = 558;   // 将来の夢行下端
 
-const HAKKO_X   = 195;   // 発行入力開始 x（将来の夢と同じ横軸）
+const HAKKO_X   = 215;   // 発行入力開始 x（195+20px）
 const HAKKO_Y1  = 558;   // 発行行上端
 const HAKKO_Y2  = 603;   // 発行行下端
 
