@@ -533,22 +533,23 @@ async function renderLicenseCardOnCanvas(
     ctx.fillText(data.nickname, NAME_X, (NAME_Y1 + NAME_Y2) / 2, TEXT_MAX_W - NAME_X);
   }
 
-  // ── 長所 ──
+  // ── 長所 (+2pxフォント) ──
   if (data.strength) {
-    const fs = data.strength.length > 12 ? 14 : data.strength.length > 8 ? 16 : 18;
+    const fs = data.strength.length > 12 ? 16 : data.strength.length > 8 ? 18 : 20;
     ctx.font = `600 ${fs}px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
     ctx.fillText(data.strength, KYOSHO_X, (KYOSHO_Y1 + KYOSHO_Y2) / 2, TEXT_MAX_W - KYOSHO_X);
   }
 
-  // ── 日付 ──
+  // ── 日付 (+2pxフォント) ──
   if (data.date) {
-    ctx.font = `600 13px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
+    ctx.font = `600 15px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
     ctx.fillText(formatDate(data.date), DATE_X, (DATE_Y1 + DATE_Y2) / 2, TEXT_MAX_W - DATE_X);
   }
 
-  // ── 約束（複数行折り返し）──
+  // ── 約束（複数行折り返し）+30px右 ──
   if (data.promise) {
-    const areaW = TEXT_MAX_W - YAKUSOKU_X;
+    const yakusokuX = YAKUSOKU_X + 30; // +30px右
+    const areaW = TEXT_MAX_W - yakusokuX;
     const areaH = YAKUSOKU_Y2 - YAKUSOKU_Y1;
     const charCount = data.promise.length;
     // ニックネームと同じ大型フォント
@@ -561,7 +562,7 @@ async function renderLicenseCardOnCanvas(
     for (const char of data.promise) {
       const testLine = line + char;
       if (ctx.measureText(testLine).width > areaW && line !== "") {
-        ctx.fillText(line, YAKUSOKU_X, YAKUSOKU_Y1 + fs * 0.8 + lineCount * lineH);
+        ctx.fillText(line, yakusokuX, YAKUSOKU_Y1 + fs * 0.8 + lineCount * lineH);
         line = char;
         lineCount++;
         if (lineCount >= maxLines) break;
@@ -570,22 +571,23 @@ async function renderLicenseCardOnCanvas(
       }
     }
     if (lineCount < maxLines && line) {
-      ctx.fillText(line, YAKUSOKU_X, YAKUSOKU_Y1 + fs * 0.8 + lineCount * lineH);
+      ctx.fillText(line, yakusokuX, YAKUSOKU_Y1 + fs * 0.8 + lineCount * lineH);
     }
   }
 
-  // ── 将来の夢 ──
+  // ── 将来の夢 (+2pxフォント・+20px右) ──
   if (data.dream) {
-    const fs = data.dream.length > 10 ? 14 : 16;
+    const yumeX = YUME_X + 20; // +20px右
+    const fs = data.dream.length > 10 ? 16 : 18;
     ctx.font = `600 ${fs}px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
-    ctx.fillText(data.dream, YUME_X, (YUME_Y1 + YUME_Y2) / 2, TEXT_MAX_W - YUME_X);
+    ctx.fillText(data.dream, yumeX, (YUME_Y1 + YUME_Y2) / 2, TEXT_MAX_W - yumeX);
   }
 
-  // ── 発行(免許メーカー) ──
-  // 将来の夢と同じフォントサイズで固定テキスト「免許メーカー」を印字
-  const dreamFs = (data.dream?.length ?? 0) > 10 ? 14 : 16;
+  // ── 発行(免許メーカー) (+2pxフォント・+20px右) ──
+  const hakkoX = HAKKO_X + 20; // +20px右
+  const dreamFs = (data.dream?.length ?? 0) > 10 ? 16 : 18;
   ctx.font = `600 ${dreamFs}px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
-  ctx.fillText("免許メーカー", HAKKO_X, (HAKKO_Y1 + HAKKO_Y2) / 2, TEXT_MAX_W - HAKKO_X);
+  ctx.fillText("免許メーカー", hakkoX, (HAKKO_Y1 + HAKKO_Y2) / 2, TEXT_MAX_W - hakkoX);
 }
 
 async function downloadLicenseSheet(card1: LicenseData, card2: LicenseData) {
@@ -604,7 +606,7 @@ async function downloadLicenseSheet(card1: LicenseData, card2: LicenseData) {
   ctx.restore();
 
   ctx.save();
-  ctx.translate(MARGIN_L, MARGIN_TOP + SCALED_H + GAP);
+  ctx.translate(MARGIN_L, MARGIN_TOP + CARD_PX_H + GAP);
   ctx.scale(FIT_SCALE, FIT_SCALE);
   await renderLicenseCardOnCanvas(ctx, card2, baseImg);
   ctx.restore();
