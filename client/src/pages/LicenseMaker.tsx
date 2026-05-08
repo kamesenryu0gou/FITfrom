@@ -185,49 +185,66 @@ function LicenseCardPreview({ data }: { data: LicenseData }) {
     return `${parts[0]}年${parseInt(parts[1])}月${parseInt(parts[2])}日`;
   };
   // 台紙確定値（1075×650px）基準の%値
-  const TEXT_L = "14.9%";       // テキスト開始x（x=160/1075）
-  const TEXT_W = "45.3%";       // テキスト幅（x=160〜647: 487px → 487/1075）
+  // mm変換: 1mm=12.56px(横), 1mm=12.04px(縦)
+  // 名前: 右に4mm(+50px) → x=210 → left=19.5%
+  // 長所: 右に4mm(+50px) → x=210 → left=19.5%
+  // 日付: 右に6mm(+75px) → x=235 → left=21.9%
+  // 約束: 下に1mm(+12px) → y=374 → top=57.5%
+  // 将来の夢: 右に2mm(+25px) → x=185 → left=17.2%
+  // 免許メーカー: 右に2mm(+25px) → x=185 → left=17.2%
   const PHOTO_L = "60.2%";      // 写真左端（x=647/1075）
   const PHOTO_W = "36.2%";      // 写真幅（x=647〜1036: 389px → 389/1075）
   return (
     <div style={{ position: "relative", width: "100%", maxWidth: "520px", margin: "0 auto" }}>
       <img src={LICENSE_CARD_BASE_URL} alt="免許証台紙" style={{ width: "100%", display: "block", borderRadius: "12px" }} />
 
-      {/* 名前 — y=41〜101 → top=6.3%, h=9.2% */}
-      <div style={{ position: "absolute", top: "6.3%", left: TEXT_L, width: TEXT_W, height: "9.2%", display: "flex", alignItems: "center", padding: "0 6px", overflow: "hidden" }}>
+      {/* 名前 — y=41〜101, x=210(+4mm右) → top=6.3%, left=19.5%, h=9.2% */}
+      <div style={{ position: "absolute", top: "6.3%", left: "19.5%", width: "40.7%", height: "9.2%", display: "flex", alignItems: "center", padding: "0 4px", overflow: "hidden" }}>
         <span style={{ fontSize: "clamp(12px, 3.0vw, 24px)", fontWeight: 700, color: "#1a1a2e", fontFamily: "'M PLUS Rounded 1c','Noto Sans JP',sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>{data.nickname}</span>
       </div>
 
-      {/* 長所 — y=136〜179 → top=20.9%, h=6.6% */}
-      <div style={{ position: "absolute", top: "20.9%", left: TEXT_L, width: TEXT_W, height: "6.6%", display: "flex", alignItems: "center", padding: "0 6px", overflow: "hidden" }}>
+      {/* 長所 — y=136〜179, x=210(+4mm右) → top=20.9%, left=19.5%, h=6.6% */}
+      <div style={{ position: "absolute", top: "20.9%", left: "19.5%", width: "40.7%", height: "6.6%", display: "flex", alignItems: "center", padding: "0 4px", overflow: "hidden" }}>
         <span style={{ fontSize: "clamp(9px, 2.0vw, 16px)", fontWeight: 600, color: "#1a1a2e", fontFamily: "'M PLUS Rounded 1c','Noto Sans JP',sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>{data.strength}</span>
       </div>
 
-      {/* 日付 — y=179〜223 → top=27.5%, h=6.8% */}
-      <div style={{ position: "absolute", top: "27.5%", left: TEXT_L, width: TEXT_W, height: "6.8%", display: "flex", alignItems: "center", padding: "0 6px", overflow: "hidden" }}>
-        <span style={{ fontSize: "clamp(9px, 1.9vw, 15px)", fontWeight: 600, color: "#1a1a2e", fontFamily: "'M PLUS Rounded 1c','Noto Sans JP',sans-serif", whiteSpace: "nowrap" }}>{formatDate(data.date)}</span>
+      {/* 日付 — y=179〜223, x=235(+6mm右) → top=27.5%, left=21.9%, h=6.8%, 文字小さめ */}
+      <div style={{ position: "absolute", top: "27.5%", left: "21.9%", width: "38.3%", height: "6.8%", display: "flex", alignItems: "center", padding: "0 4px", overflow: "hidden" }}>
+        <span style={{ fontSize: "clamp(7px, 1.5vw, 12px)", fontWeight: 600, color: "#1a1a2e", fontFamily: "'M PLUS Rounded 1c','Noto Sans JP',sans-serif", whiteSpace: "nowrap" }}>{formatDate(data.date)}</span>
       </div>
 
-      {/* 約束 — y=362〜511 → top=55.7%, h=22.9% */}
-      <div style={{ position: "absolute", top: "55.7%", left: TEXT_L, width: TEXT_W, height: "22.9%", display: "flex", alignItems: "flex-start", justifyContent: "flex-start", padding: "4px 6px", overflow: "hidden" }}>
-        <span style={{ fontSize: "clamp(8px, 1.8vw, 14px)", fontWeight: 600, color: "#1a1a2e", fontFamily: "'M PLUS Rounded 1c','Noto Sans JP',sans-serif", lineHeight: 1.6, wordBreak: "break-all", display: "-webkit-box", WebkitLineClamp: 8, WebkitBoxOrient: "vertical", overflow: "hidden" } as React.CSSProperties}>{data.promise}</span>
+      {/* 約束 — y=374(+1mm下) → top=57.5%, left=19.5%, h=21.1%, 文字サイズ2px小さめ */}
+      <div style={{ position: "absolute", top: "57.5%", left: "19.5%", width: "40.7%", height: "21.1%", display: "flex", alignItems: "flex-start", justifyContent: "flex-start", padding: "2px 4px", overflow: "hidden" }}>
+        <span style={{ fontSize: "clamp(6px, 1.4vw, 11px)", fontWeight: 600, color: "#1a1a2e", fontFamily: "'M PLUS Rounded 1c','Noto Sans JP',sans-serif", lineHeight: 1.6, wordBreak: "break-all", display: "-webkit-box", WebkitLineClamp: 9, WebkitBoxOrient: "vertical", overflow: "hidden" } as React.CSSProperties}>{data.promise}</span>
       </div>
 
-      {/* 将来の夢 — y=511〜558 → top=78.6%, h=7.2% (行9+10合算) */}
-      <div style={{ position: "absolute", top: "78.6%", left: TEXT_L, width: TEXT_W, height: "7.2%", display: "flex", alignItems: "center", padding: "0 6px", overflow: "hidden" }}>
+      {/* 将来の夢 — y=511〜558, x=185(+2mm右) → top=78.6%, left=17.2%, h=7.2% */}
+      <div style={{ position: "absolute", top: "78.6%", left: "17.2%", width: "43.0%", height: "7.2%", display: "flex", alignItems: "center", padding: "0 4px", overflow: "hidden" }}>
         <span style={{ fontSize: "clamp(9px, 1.9vw, 15px)", fontWeight: 600, color: "#1a1a2e", fontFamily: "'M PLUS Rounded 1c','Noto Sans JP',sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>{data.dream}</span>
       </div>
 
-      {/* 発行 — y=558〜604 → top=85.8%, h=7.1% */}
-      <div style={{ position: "absolute", top: "85.8%", left: TEXT_L, width: TEXT_W, height: "7.1%", display: "flex", alignItems: "center", padding: "0 6px", overflow: "hidden" }}>
+      {/* 発行(免許メーカー) — y=558〜604, x=185(+2mm右) → top=85.8%, left=17.2%, h=7.1% */}
+      <div style={{ position: "absolute", top: "85.8%", left: "17.2%", width: "43.0%", height: "7.1%", display: "flex", alignItems: "center", padding: "0 4px", overflow: "hidden" }}>
         <span style={{ fontSize: "clamp(8px, 1.7vw, 13px)", fontWeight: 600, color: "#1a1a2e", fontFamily: "'M PLUS Rounded 1c','Noto Sans JP',sans-serif", whiteSpace: "nowrap" }}>免許メーカー</span>
       </div>
 
       {/* 写真 — x=647〜1036, y=41〜604 → left=60.2%, top=6.3%, w=36.2%, h=86.6% */}
-      {/* 安全認定スタンプ(x=527〜666)より右(x=647〜)から始まるので被らない */}
-      <div style={{ position: "absolute", top: "6.3%", left: PHOTO_L, width: PHOTO_W, height: "86.6%", overflow: "hidden", borderRadius: "2px" }}>
+      {/* 完全に枠内に収める: objectFit=coverで枠の内側に必ず収まるようにする */}
+      <div style={{ position: "absolute", top: "6.3%", left: PHOTO_L, width: PHOTO_W, height: "86.6%", overflow: "hidden", borderRadius: "2px", backgroundColor: "transparent" }}>
         {displayPhoto ? (
-          <img src={displayPhoto} alt="photo" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top" }} />
+          <img
+            src={displayPhoto}
+            alt="photo"
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: "center top",
+              display: "block",
+              maxWidth: "100%",
+              maxHeight: "100%",
+            }}
+          />
         ) : (
           <div style={{ width: "100%", height: "100%", background: "transparent" }} />
         )}
@@ -247,7 +264,20 @@ const SCALE   = 3;     // 拡大倍率（3倍 = 3225×1950px）
 // ラベル右端 x=154（テキスト入力開始: x=160）
 // 入力エリア: x=160〜647（写真左端）
 // 写真エリア: x=647〜1036（安全認定スタンプ x=527〜666 より右なので被らない）
-const LABEL_R = 160;   // テキスト入力開始位置（x=160）
+// mm調整後の座標（1mm=12.56px横, 1mm=12.04px縦）
+// 名前: 右に4mm(+50px) → x=210
+const NAME_X   = 210;  // 名前入力開始（+4mm）
+// 長所: 右に4mm(+50px) → x=210
+const KYOSHO_X = 210;  // 長所入力開始（+4mm）
+// 日付: 右に6mm(+75px) → x=235
+const DATE_X   = 235;  // 日付入力開始（+6mm）
+// 約束: 下に1mm(+12px) → y=374
+const YAKUSOKU_X = 210; // 約束入力開始（名前と同じ）
+// 将来の夢: 右に2mm(+25px) → x=185
+const YUME_X   = 185;  // 将来の夢入力開始（+2mm）
+// 発行: 右に2mm(+25px) → x=185
+const HAKKO_X  = 185;  // 発行入力開始（+2mm）
+const LABEL_R = 160;   // テキスト入力基準位置（x=160）
 const PHOTO_L = 647;   // 写真エリア左端（確定値: x=647）
 const CARD_R  = 1036;  // カード右端（写真エリア右端）
 const NAME_Y1 = 41;    // 名前行上端（行1: y=41〜101）
@@ -256,7 +286,7 @@ const KYOSHO_Y1 = 136; // 長所行上端（行3: y=136〜179）
 const KYOSHO_Y2 = 179; // 長所行下端
 const DATE_Y1 = 179;   // 日付行上端（行4: y=179〜223）
 const DATE_Y2 = 223;   // 日付行下端
-const YAKUSOKU_Y1 = 362; // 約束エリア上端（行8: y=362〜511）
+const YAKUSOKU_Y1 = 374; // 約束エリア上端（+1mm下: y=374）
 const YAKUSOKU_Y2 = 511; // 約束エリア下端
 const YUME_Y1 = 511;   // 将来の夢行上端（行9+10: y=511〜558）
 const YUME_Y2 = 558;   // 将来の夢行下端
@@ -328,32 +358,32 @@ async function renderLicenseCardOnCanvas(
     return `${parts[0]}年${parseInt(parts[1])}月${parseInt(parts[2])}日`;
   };
 
-  // ── 名前: x=LABEL_R+10, y=中央 (NAME_Y1+NAME_Y2)/2 ──
+  // ── 名前: x=NAME_X(+4mm右), y=中央 (NAME_Y1+NAME_Y2)/2 ──
   if (data.nickname) {
     const fs = data.nickname.length > 10 ? 18 : data.nickname.length > 6 ? 22 : 26;
     ctx.font = `bold ${fs}px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
-    ctx.fillText(data.nickname, LABEL_R + 10, (NAME_Y1 + NAME_Y2) / 2, CARD_R - LABEL_R - 20);
+    ctx.fillText(data.nickname, NAME_X, (NAME_Y1 + NAME_Y2) / 2, PHOTO_L - NAME_X - 10);
   }
 
-  // ── 長所: x=LABEL_R+10, y=中央 (KYOSHO_Y1+KYOSHO_Y2)/2 ──
+  // ── 長所: x=KYOSHO_X(+4mm右), y=中央 (KYOSHO_Y1+KYOSHO_Y2)/2 ──
   if (data.strength) {
     const fs = data.strength.length > 12 ? 14 : data.strength.length > 8 ? 16 : 18;
     ctx.font = `600 ${fs}px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
-    ctx.fillText(data.strength, LABEL_R + 10, (KYOSHO_Y1 + KYOSHO_Y2) / 2, PHOTO_L - LABEL_R - 20);
+    ctx.fillText(data.strength, KYOSHO_X, (KYOSHO_Y1 + KYOSHO_Y2) / 2, PHOTO_L - KYOSHO_X - 10);
   }
 
-  // ── 日付: x=LABEL_R+10, y=中央 (DATE_Y1+DATE_Y2)/2 ──
+  // ── 日付: x=DATE_X(+6mm右), y=中央 (DATE_Y1+DATE_Y2)/2, 文字小さめ ──
   if (data.date) {
-    ctx.font = `600 16px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
-    ctx.fillText(formatDate(data.date), LABEL_R + 10, (DATE_Y1 + DATE_Y2) / 2, PHOTO_L - LABEL_R - 20);
+    ctx.font = `600 13px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
+    ctx.fillText(formatDate(data.date), DATE_X, (DATE_Y1 + DATE_Y2) / 2, PHOTO_L - DATE_X - 10);
   }
 
-  // ── 約束（複数行折り返し）: x=LABEL_R+10, y=YAKUSOKU_Y1〜──
+  // ── 約束（複数行折り返し）: x=YAKUSOKU_X, y=YAKUSOKU_Y1(+1mm下)〜, 文字サイズ2px小さめ ──
   if (data.promise) {
-    const areaW = PHOTO_L - LABEL_R - 20;
+    const areaW = PHOTO_L - YAKUSOKU_X - 10;
     const areaH = YAKUSOKU_Y2 - YAKUSOKU_Y1;
     const charCount = data.promise.length;
-    const fs = charCount > 40 ? 14 : charCount > 20 ? 17 : 20;
+    const fs = charCount > 40 ? 12 : charCount > 20 ? 15 : 18;
     const lineH = fs * 1.6;
     const maxLines = Math.floor(areaH / lineH);
     ctx.font = `600 ${fs}px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
@@ -362,7 +392,7 @@ async function renderLicenseCardOnCanvas(
     for (const char of data.promise) {
       const testLine = line + char;
       if (ctx.measureText(testLine).width > areaW && line !== "") {
-        ctx.fillText(line, LABEL_R + 10, YAKUSOKU_Y1 + fs * 0.8 + lineCount * lineH);
+        ctx.fillText(line, YAKUSOKU_X, YAKUSOKU_Y1 + fs * 0.8 + lineCount * lineH);
         line = char;
         lineCount++;
         if (lineCount >= maxLines) break;
@@ -371,20 +401,20 @@ async function renderLicenseCardOnCanvas(
       }
     }
     if (lineCount < maxLines && line) {
-      ctx.fillText(line, LABEL_R + 10, YAKUSOKU_Y1 + fs * 0.8 + lineCount * lineH);
+      ctx.fillText(line, YAKUSOKU_X, YAKUSOKU_Y1 + fs * 0.8 + lineCount * lineH);
     }
   }
 
-  // ── 将来の夢: x=LABEL_R+10, y=中央 (YUME_Y1+YUME_Y2)/2 ──
+  // ── 将来の夢: x=YUME_X(+2mm右), y=中央 (YUME_Y1+YUME_Y2)/2 ──
   if (data.dream) {
     const fs = data.dream.length > 10 ? 14 : 16;
     ctx.font = `600 ${fs}px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
-    ctx.fillText(data.dream, LABEL_R + 10, (YUME_Y1 + YUME_Y2) / 2, PHOTO_L - LABEL_R - 20);
+    ctx.fillText(data.dream, YUME_X, (YUME_Y1 + YUME_Y2) / 2, PHOTO_L - YUME_X - 10);
   }
 
-  // ── 発行: x=LABEL_R+10, y=中央 (HAKKO_Y1+HAKKO_Y2)/2 ──
+  // ── 発行(免許メーカー): x=HAKKO_X(+2mm右), y=中央 (HAKKO_Y1+HAKKO_Y2)/2 ──
   ctx.font = `600 13px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
-  ctx.fillText("免許メーカー", LABEL_R + 10, (HAKKO_Y1 + HAKKO_Y2) / 2, PHOTO_L - LABEL_R - 20);
+  ctx.fillText("免許メーカー", HAKKO_X, (HAKKO_Y1 + HAKKO_Y2) / 2, PHOTO_L - HAKKO_X - 10);
 
   // ── 写真: x=PHOTO_L(647), y=PHOTO_Y1(41), w=CARD_R-PHOTO_L(389px), h=PHOTO_Y2-PHOTO_Y1(563px) ──
   // 安全認定スタンプ(x=527〜666)より右(x=647〜)から始まるので被らない
