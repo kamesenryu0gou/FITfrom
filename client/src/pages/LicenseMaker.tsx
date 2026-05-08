@@ -328,8 +328,7 @@ function LicenseCardPreview({ data }: { data: LicenseData }) {
 
       {/* 約束: y=290〜516（帯の下端y=286から）, x=220〜680（優良ボックスの右から）
           top=44.6%(290/650), h=34.8%(226/650), left=20.5%(220/1075), w=42.1%(452/1075)
-          「おとなになるまでまで有効」帯(y=228〜286)の下・優良ボックス(x=30〜200)の右
-          フォントサイズ: 名前と同じ大型（clamp(10px, 2.8vw, 22px)） */}
+          「おとなになるまでまで有効」帯(y=228〜286)の下・優良ボックス(x=30〜200)の右 */}
       <div style={{
         position: "absolute",
         top: "44.6%",
@@ -343,14 +342,14 @@ function LicenseCardPreview({ data }: { data: LicenseData }) {
         padding: "2px 2px 2px 2px",
       }}>
         <span style={{
-          fontSize: "clamp(10px, 2.8vw, 22px)",
-          fontWeight: 700,
+          fontSize: "clamp(6px, 1.5vw, 12px)",
+          fontWeight: 600,
           color: "#1a1a2e",
           fontFamily: "'M PLUS Rounded 1c','Noto Sans JP',sans-serif",
-          lineHeight: 1.4,
+          lineHeight: 1.6,
           wordBreak: "break-all",
           display: "-webkit-box",
-          WebkitLineClamp: 6,
+          WebkitLineClamp: 12,
           WebkitBoxOrient: "vertical",
           overflow: "hidden",
         } as React.CSSProperties}>{data.promise}</span>
@@ -382,32 +381,18 @@ function LicenseCardPreview({ data }: { data: LicenseData }) {
         }}>{data.dream}</span>
       </div>
 
-      {/* 発行欄の背景に元から描かれている「免許メーカー」文字を白塗りで隠す
-          発行ラベル右側: y=558〜603, x=165〜620
-          top=85.8%, h=6.9%, left=15.3%, w=42.3% */}
+      {/* 発行(免許メーカー): y=558〜603, x=165〜680
+          top=85.8%, h=6.9%, left=15.3%, w=47.9% */}
       <div style={{
         position: "absolute",
         top: "85.8%",
         left: "15.3%",
-        width: "42.3%",
-        height: "6.9%",
-        backgroundColor: "rgba(255,255,255,0.92)",
-        zIndex: 1,
-      }} />
-
-      {/* 発行(免許メーカー)固定テキスト: 白塗りの上に重ねる
-          top=85.8%, h=6.9%, left=15.3%, w=42.3% */}
-      <div style={{
-        position: "absolute",
-        top: "85.8%",
-        left: "15.3%",
-        width: "42.3%",
+        width: "47.9%",
         height: "6.9%",
         display: "flex",
         alignItems: "center",
         overflow: "hidden",
         padding: "0 4px",
-        zIndex: 2,
       }}>
         <span style={{
           fontSize: "clamp(7px, 1.6vw, 13px)",
@@ -552,16 +537,15 @@ async function renderLicenseCardOnCanvas(
     ctx.fillText(formatDate(data.date), DATE_X, (DATE_Y1 + DATE_Y2) / 2, TEXT_MAX_W - DATE_X);
   }
 
-  // ── 約束（複数行折り返し・名前と同じ大型フォント）──
+  // ── 約束（複数行折り返し）──
   if (data.promise) {
     const areaW = TEXT_MAX_W - YAKUSOKU_X;
     const areaH = YAKUSOKU_Y2 - YAKUSOKU_Y1;
     const charCount = data.promise.length;
-    // 名前と同じ大型フォント（文字数に応じて自動調整）
-    const fs = charCount > 20 ? 18 : charCount > 10 ? 22 : 26;
-    const lineH = fs * 1.4;
+    const fs = charCount > 40 ? 12 : charCount > 20 ? 15 : 18;
+    const lineH = fs * 1.6;
     const maxLines = Math.floor(areaH / lineH);
-    ctx.font = `bold ${fs}px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
+    ctx.font = `600 ${fs}px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
     let line = "";
     let lineCount = 0;
     for (const char of data.promise) {
@@ -587,15 +571,9 @@ async function renderLicenseCardOnCanvas(
     ctx.fillText(data.dream, YUME_X, (YUME_Y1 + YUME_Y2) / 2, TEXT_MAX_W - YUME_X);
   }
 
-  // ── 発行欄の背景「免許メーカー」文字を白塗りで隠す ──
-  // 発行ラベル右側の白塗りエリア: x=HAKKO_X〜620, y=HAKKO_Y1〜HAKKO_Y2
-  ctx.fillStyle = "rgba(255,255,255,0.92)";
-  ctx.fillRect(HAKKO_X, HAKKO_Y1, 620 - HAKKO_X, HAKKO_Y2 - HAKKO_Y1);
-  ctx.fillStyle = "#1a1a2e";
-
-  // ── 発行(免許メーカー)固定テキスト ──
+  // ── 発行(免許メーカー) ──
   ctx.font = `600 13px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
-  ctx.fillText("免許メーカー", HAKKO_X, (HAKKO_Y1 + HAKKO_Y2) / 2, 620 - HAKKO_X);
+  ctx.fillText("免許メーカー", HAKKO_X, (HAKKO_Y1 + HAKKO_Y2) / 2, TEXT_MAX_W - HAKKO_X);
 }
 
 async function downloadLicenseSheet(card1: LicenseData, card2: LicenseData) {
