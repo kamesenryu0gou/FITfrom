@@ -337,21 +337,21 @@ export async function downloadCard(cardData: CardData): Promise<void> {
 const DPI = 300;
 const MM_TO_PX = DPI / 25.4;
 
-// 用紙: 100mm × 148mm @ 300dpi（縦向きハガキサイズ）
+// 用紙: 100mm × 148.5mm @ 300dpi（縦向きハガキサイズ）JP-ID03N仕様
 const SHEET_W_PX = Math.round(100 * MM_TO_PX);    // 1181 px
-const SHEET_H_PX = Math.round(148 * MM_TO_PX);    // 1748 px
+const SHEET_H_PX = Math.round(148.5 * MM_TO_PX);  // 1754 px
 
-// カードは縦向き（portrait）で配置: 85.6mm幅 × 54mm高さ
+// カードは横向き（landscape）で配置: 85.6mm幅 × 54mm高さ
 // カードテンプレートは縦向き（portrait）なのでそのまま配置
 const CARD_SHEET_W = Math.round(85.6 * MM_TO_PX); // 1011 px（カードの幅）
 const CARD_SHEET_H = Math.round(54 * MM_TO_PX);   //  638 px（カードの高さ）
 
-// 左余白: 7.2mm
+// 左余白: (100 - 85.6) / 2 = 7.2mm（左右均等）
 const MARGIN_LEFT = Math.round(7.2 * MM_TO_PX);   //  85 px
-// 上余白: 18mm
-const MARGIN_TOP  = Math.round(18 * MM_TO_PX);    // 213 px
-// カード間隔: 4.5mm
-const CARD_GAP    = Math.round(4.5 * MM_TO_PX);   //  53 px
+// 上余白: (148.5 - 54×2) / 3 = 13.5mm（上下余白・カード間隔を3等分）
+const MARGIN_TOP  = Math.round(13.5 * MM_TO_PX);  // 159 px
+// カード間隔: 13.5mm（上余白と同じ）
+const CARD_GAP    = Math.round(13.5 * MM_TO_PX);  // 159 px
 
 /**
  * Renders a single card at the exact pixel dimensions needed for the sheet.
