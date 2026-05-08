@@ -1,10 +1,9 @@
 /**
  * LicenseMaker.tsx
  * 子供向け免許証メーカー
- * - HTMLサンプル（!DOCTYPE.html）のデザインをベースに再構築
- * - マカロン風入力フィールド・キャンディ背景・左フォーム右プレビュー
- * - 「作成」ボタンで台紙ベースの2枚プレビュー表示
- * - ダウンロード機能（スマホ対応）
+ * - 台紙実測値（1075×650px）に基づく正確なレイアウト
+ * - 写真がカードサイズを変動させない固定レイアウト
+ * - プレビューとダウンロードCanvasの完全同期
  */
 import { useState, useCallback, useRef } from "react";
 import { useLocation } from "wouter";
@@ -144,38 +143,52 @@ function CropModal({
   );
 }
 
+// ── 台紙実測値（Pillow精密計測・確定値）────────────────────────────────────────
+//
+// 台紙サイズ: 1075 × 650 px
+//
+// 横方向の枠線（y座標）:
+//   y=46:  名前欄の上端
+//   y=100: 名前欄の下端
+//   y=105: 長所・日付エリアの上端（外枠）
+//   y=141: 長所欄の下端 / 日付欄の上端
+//   y=183: 日付欄の下端 / 写真エリア上端
+//   y=228: 「おとなになるまでまで有効」帯の下端 / 約束エリアの上端
+//   y=516: 約束エリアの下端 / 将来の夢欄の上端
+//   y=558: 将来の夢欄の下端 / 発行欄の上端
+//   y=603: 発行欄の下端 / 写真エリア下端
+//
+// 縦方向の枠線（x座標）:
+//   x=30:  カード左端（内側）
+//   x=155: ラベル右端（「名前」「長所」「日付」「将来の夢」「発行」のラベル幅）
+//   x=682: 写真エリアの左端（実測: x=652-681の範囲が枠線）
+//   x=1011: 写真エリアの右端
+//
+// テキスト入力開始位置:
+//   名前: x=165（ラベル右端+10px）
+//   長所: x=165
+//   日付: x=165
+//   約束: x=35（左端+5px）
+//   将来の夢: x=165
+//   発行: x=165
+//
+// 写真エリア: x=682〜1011, y=183〜603
+//   幅: 329px (682〜1011)
+//   高: 420px (183〜603)
+//   アスペクト比: 329:420 ≒ 0.78:1 (縦長)
+//
+// %値計算（1075×650px基準）:
+//   名前:     top=7.1%(46/650),   h=8.3%(54/650),   left=15.3%(165/1075), w=47.9%(515/1075)
+//   長所:     top=21.7%(141/650), h=6.5%(42/650),   left=15.3%(165/1075), w=47.9%(515/1075)
+//   日付:     top=28.2%(183/650), h=6.9%(45/650),   left=15.3%(165/1075), w=47.9%(515/1075)
+//   約束:     top=35.1%(228/650), h=44.3%(288/650), left=3.3%(35/1075),   w=59.3%(638/1075)
+//   将来の夢: top=79.4%(516/650), h=6.5%(42/650),   left=15.3%(165/1075), w=47.9%(515/1075)
+//   発行:     top=85.8%(558/650), h=6.9%(45/650),   left=15.3%(165/1075), w=47.9%(515/1075)
+//   写真:     top=28.2%(183/650), h=64.6%(420/650), left=63.4%(682/1075), w=30.6%(329/1075)
+//
+// 注意: 約束エリアはラベルなし（左端から始まる）、写真エリアは y=183 から始まる
+
 // ── LicenseCardPreview ────────────────────────────────────────────────────────
-// 台紙実測値（1075×650px）をそのまま%値に変換（精密計測済み・確定値）
-//
-// 確定した行構造（アノテーション画像で検証済み）:
-//   行0: y=0〜41   (空白)
-//   行1: y=41〜101  (「名前」ラベル + 名前入力エリア)
-//   行2: y=101〜136 (空白行)
-//   行3: y=136〜179 (「長所」ラベル + 長所入力エリア)
-//   行4: y=179〜223 (「日付」ラベル + 日付入力エリア)
-//   行5: y=223〜242 (「おとなになるまでまで有効」テキスト)
-//   行6: y=242〜307 (続き + 「優良」ボックス)
-//   行7: y=307〜362 (「優良」ボックス下部 + 空白)
-//   行8: y=362〜511 (約束入力エリア)
-//   行9: y=511〜536 (「将来の夢」ラベル行)
-//   行10: y=536〜558 (「将来の夢」入力エリア)
-//   行11: y=558〜604 (「発行」ラベル + 発行入力エリア)
-//   行12: y=604〜650 (下部空白)
-//
-// ラベル右端: x=154（テキスト入力開始: x=160）
-// 写真エリア: x=647〜1036, y=41〜604
-// 安全認定スタンプ: x=527〜666, y=461〜600（写真はx=647から始まるので被らない）
-//
-// %値計算（台紙 1075×650px 基準）:
-//   名前: top=6.3%(41/650), h=9.2%(60/650)
-//   長所: top=20.9%(136/650), h=6.6%(43/650)
-//   日付: top=27.5%(179/650), h=6.8%(44/650)
-//   約束: top=55.7%(362/650), h=22.9%(149/650)
-//   将来の夢: top=78.6%(511/650), h=7.2%(47/650) ← 行9+10合算
-//   発行: top=85.8%(558/650), h=7.1%(46/650)
-//   写真: left=60.2%(647/1075), top=6.3%(41/650), w=36.2%(389/1075), h=86.6%(563/650)
-//   テキスト開始: left=14.9%(160/1075)
-//   テキスト幅: 44.9%(483/1075)（647-160=487→487/1075=45.3%）
 function LicenseCardPreview({ data }: { data: LicenseData }) {
   const displayPhoto = data.aiPhotoUrl || data.photoUrl;
   const formatDate = (d: string) => {
@@ -184,53 +197,45 @@ function LicenseCardPreview({ data }: { data: LicenseData }) {
     if (parts.length !== 3) return d;
     return `${parts[0]}年${parseInt(parts[1])}月${parseInt(parts[2])}日`;
   };
-  // 台紙確定値（1075×650px）基準の%値
-  // mm変換: 1mm=12.56px(横), 1mm=12.04px(縦)
-  // 名前: 右に4mm(+50px) → x=210 → left=19.5%
-  // 長所: 右に4mm(+50px) → x=210 → left=19.5%
-  // 日付: 右に6mm(+75px) → x=235 → left=21.9%
-  // 約束: 下に1mm(+12px) → y=374 → top=57.5%
-  // 将来の夢: 右に2mm(+25px) → x=185 → left=17.2%
-  // 免許メーカー: 右に2mm(+25px) → x=185 → left=17.2%
-  const PHOTO_L = "60.2%";      // 写真左端（x=647/1075）
-  const PHOTO_W = "36.2%";      // 写真幅（x=647〜1036: 389px → 389/1075）
+
   return (
-    <div style={{ position: "relative", width: "100%", maxWidth: "520px", margin: "0 auto" }}>
-      <img src={LICENSE_CARD_BASE_URL} alt="免許証台紙" style={{ width: "100%", display: "block", borderRadius: "12px" }} />
+    // カード全体を固定サイズコンテナで囲む
+    // maxWidth: 520px に対して aspect-ratio で高さを固定
+    <div style={{
+      position: "relative",
+      width: "100%",
+      maxWidth: "520px",
+      margin: "0 auto",
+      // アスペクト比を台紙と同じ 1075:650 に固定
+      aspectRatio: "1075 / 650",
+    }}>
+      {/* 台紙画像: 親コンテナを100%埋める */}
+      <img
+        src={LICENSE_CARD_BASE_URL}
+        alt="免許証台紙"
+        style={{
+          position: "absolute",
+          top: 0, left: 0,
+          width: "100%",
+          height: "100%",
+          display: "block",
+          borderRadius: "12px",
+        }}
+      />
 
-      {/* 名前 — y=41〜101, x=210(+4mm右) → top=6.3%, left=19.5%, h=9.2% */}
-      <div style={{ position: "absolute", top: "6.3%", left: "19.5%", width: "40.7%", height: "9.2%", display: "flex", alignItems: "center", padding: "0 4px", overflow: "hidden" }}>
-        <span style={{ fontSize: "clamp(12px, 3.0vw, 24px)", fontWeight: 700, color: "#1a1a2e", fontFamily: "'M PLUS Rounded 1c','Noto Sans JP',sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>{data.nickname}</span>
-      </div>
-
-      {/* 長所 — y=136〜179, x=210(+4mm右) → top=20.9%, left=19.5%, h=6.6% */}
-      <div style={{ position: "absolute", top: "20.9%", left: "19.5%", width: "40.7%", height: "6.6%", display: "flex", alignItems: "center", padding: "0 4px", overflow: "hidden" }}>
-        <span style={{ fontSize: "clamp(9px, 2.0vw, 16px)", fontWeight: 600, color: "#1a1a2e", fontFamily: "'M PLUS Rounded 1c','Noto Sans JP',sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>{data.strength}</span>
-      </div>
-
-      {/* 日付 — y=179〜223, x=235(+6mm右) → top=27.5%, left=21.9%, h=6.8%, 文字小さめ */}
-      <div style={{ position: "absolute", top: "27.5%", left: "21.9%", width: "38.3%", height: "6.8%", display: "flex", alignItems: "center", padding: "0 4px", overflow: "hidden" }}>
-        <span style={{ fontSize: "clamp(7px, 1.5vw, 12px)", fontWeight: 600, color: "#1a1a2e", fontFamily: "'M PLUS Rounded 1c','Noto Sans JP',sans-serif", whiteSpace: "nowrap" }}>{formatDate(data.date)}</span>
-      </div>
-
-      {/* 約束 — y=374(+1mm下) → top=57.5%, left=19.5%, h=21.1%, 文字サイズ2px小さめ */}
-      <div style={{ position: "absolute", top: "57.5%", left: "19.5%", width: "40.7%", height: "21.1%", display: "flex", alignItems: "flex-start", justifyContent: "flex-start", padding: "2px 4px", overflow: "hidden" }}>
-        <span style={{ fontSize: "clamp(6px, 1.4vw, 11px)", fontWeight: 600, color: "#1a1a2e", fontFamily: "'M PLUS Rounded 1c','Noto Sans JP',sans-serif", lineHeight: 1.6, wordBreak: "break-all", display: "-webkit-box", WebkitLineClamp: 9, WebkitBoxOrient: "vertical", overflow: "hidden" } as React.CSSProperties}>{data.promise}</span>
-      </div>
-
-      {/* 将来の夢 — y=511〜558, x=185(+2mm右) → top=78.6%, left=17.2%, h=7.2% */}
-      <div style={{ position: "absolute", top: "78.6%", left: "17.2%", width: "43.0%", height: "7.2%", display: "flex", alignItems: "center", padding: "0 4px", overflow: "hidden" }}>
-        <span style={{ fontSize: "clamp(9px, 1.9vw, 15px)", fontWeight: 600, color: "#1a1a2e", fontFamily: "'M PLUS Rounded 1c','Noto Sans JP',sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>{data.dream}</span>
-      </div>
-
-      {/* 発行(免許メーカー) — y=558〜604, x=185(+2mm右) → top=85.8%, left=17.2%, h=7.1% */}
-      <div style={{ position: "absolute", top: "85.8%", left: "17.2%", width: "43.0%", height: "7.1%", display: "flex", alignItems: "center", padding: "0 4px", overflow: "hidden" }}>
-        <span style={{ fontSize: "clamp(8px, 1.7vw, 13px)", fontWeight: 600, color: "#1a1a2e", fontFamily: "'M PLUS Rounded 1c','Noto Sans JP',sans-serif", whiteSpace: "nowrap" }}>免許メーカー</span>
-      </div>
-
-      {/* 写真 — x=647〜1036, y=41〜604 → left=60.2%, top=6.3%, w=36.2%, h=86.6% */}
-      {/* 完全に枠内に収める: objectFit=coverで枠の内側に必ず収まるようにする */}
-      <div style={{ position: "absolute", top: "6.3%", left: PHOTO_L, width: PHOTO_W, height: "86.6%", overflow: "hidden", borderRadius: "2px", backgroundColor: "transparent" }}>
+      {/* 写真エリア: 台紙の上に重ねる（固定サイズ）
+          実測値: x=682〜1011, y=183〜603
+          %値: left=63.4%, top=28.2%, w=30.6%, h=64.6%
+          overflow:hidden で絶対に枠からはみ出さない */}
+      <div style={{
+        position: "absolute",
+        top: "28.2%",
+        left: "63.4%",
+        width: "30.6%",
+        height: "64.6%",
+        overflow: "hidden",
+        backgroundColor: "transparent",
+      }}>
         {displayPhoto ? (
           <img
             src={displayPhoto}
@@ -241,78 +246,220 @@ function LicenseCardPreview({ data }: { data: LicenseData }) {
               objectFit: "cover",
               objectPosition: "center top",
               display: "block",
-              maxWidth: "100%",
-              maxHeight: "100%",
             }}
           />
-        ) : (
-          <div style={{ width: "100%", height: "100%", background: "transparent" }} />
-        )}
+        ) : null}
+      </div>
+
+      {/* 名前: y=46〜100, x=165〜680
+          top=7.1%, h=8.3%, left=15.3%, w=47.9% */}
+      <div style={{
+        position: "absolute",
+        top: "7.1%",
+        left: "15.3%",
+        width: "47.9%",
+        height: "8.3%",
+        display: "flex",
+        alignItems: "center",
+        overflow: "hidden",
+        padding: "0 4px",
+      }}>
+        <span style={{
+          fontSize: "clamp(10px, 2.8vw, 22px)",
+          fontWeight: 700,
+          color: "#1a1a2e",
+          fontFamily: "'M PLUS Rounded 1c','Noto Sans JP',sans-serif",
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          maxWidth: "100%",
+          lineHeight: 1,
+        }}>{data.nickname}</span>
+      </div>
+
+      {/* 長所: y=141〜183, x=165〜680
+          top=21.7%, h=6.5%, left=15.3%, w=47.9% */}
+      <div style={{
+        position: "absolute",
+        top: "21.7%",
+        left: "15.3%",
+        width: "47.9%",
+        height: "6.5%",
+        display: "flex",
+        alignItems: "center",
+        overflow: "hidden",
+        padding: "0 4px",
+      }}>
+        <span style={{
+          fontSize: "clamp(8px, 2.0vw, 16px)",
+          fontWeight: 600,
+          color: "#1a1a2e",
+          fontFamily: "'M PLUS Rounded 1c','Noto Sans JP',sans-serif",
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          maxWidth: "100%",
+          lineHeight: 1,
+        }}>{data.strength}</span>
+      </div>
+
+      {/* 日付: y=183〜228, x=165〜680
+          top=28.2%, h=6.9%, left=15.3%, w=47.9% */}
+      <div style={{
+        position: "absolute",
+        top: "28.2%",
+        left: "15.3%",
+        width: "47.9%",
+        height: "6.9%",
+        display: "flex",
+        alignItems: "center",
+        overflow: "hidden",
+        padding: "0 4px",
+      }}>
+        <span style={{
+          fontSize: "clamp(7px, 1.6vw, 13px)",
+          fontWeight: 600,
+          color: "#1a1a2e",
+          fontFamily: "'M PLUS Rounded 1c','Noto Sans JP',sans-serif",
+          whiteSpace: "nowrap",
+          lineHeight: 1,
+        }}>{formatDate(data.date)}</span>
+      </div>
+
+      {/* 約束: y=290〜516（帯の下端y=286から）, x=220〜680（優良ボックスの右から）
+          top=44.6%(290/650), h=34.8%(226/650), left=20.5%(220/1075), w=42.1%(452/1075)
+          「おとなになるまでまで有効」帯(y=228〜286)の下・優良ボックス(x=30〜200)の右 */}
+      <div style={{
+        position: "absolute",
+        top: "44.6%",
+        left: "20.5%",
+        width: "42.1%",
+        height: "34.8%",
+        display: "flex",
+        alignItems: "flex-start",
+        justifyContent: "flex-start",
+        overflow: "hidden",
+        padding: "2px 2px 2px 2px",
+      }}>
+        <span style={{
+          fontSize: "clamp(6px, 1.5vw, 12px)",
+          fontWeight: 600,
+          color: "#1a1a2e",
+          fontFamily: "'M PLUS Rounded 1c','Noto Sans JP',sans-serif",
+          lineHeight: 1.6,
+          wordBreak: "break-all",
+          display: "-webkit-box",
+          WebkitLineClamp: 12,
+          WebkitBoxOrient: "vertical",
+          overflow: "hidden",
+        } as React.CSSProperties}>{data.promise}</span>
+      </div>
+
+      {/* 将来の夢: y=516〜558, x=165〜680
+          top=79.4%, h=6.5%, left=15.3%, w=47.9% */}
+      <div style={{
+        position: "absolute",
+        top: "79.4%",
+        left: "15.3%",
+        width: "47.9%",
+        height: "6.5%",
+        display: "flex",
+        alignItems: "center",
+        overflow: "hidden",
+        padding: "0 4px",
+      }}>
+        <span style={{
+          fontSize: "clamp(8px, 1.9vw, 15px)",
+          fontWeight: 600,
+          color: "#1a1a2e",
+          fontFamily: "'M PLUS Rounded 1c','Noto Sans JP',sans-serif",
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          maxWidth: "100%",
+          lineHeight: 1,
+        }}>{data.dream}</span>
+      </div>
+
+      {/* 発行(免許メーカー): y=558〜603, x=165〜680
+          top=85.8%, h=6.9%, left=15.3%, w=47.9% */}
+      <div style={{
+        position: "absolute",
+        top: "85.8%",
+        left: "15.3%",
+        width: "47.9%",
+        height: "6.9%",
+        display: "flex",
+        alignItems: "center",
+        overflow: "hidden",
+        padding: "0 4px",
+      }}>
+        <span style={{
+          fontSize: "clamp(7px, 1.6vw, 13px)",
+          fontWeight: 600,
+          color: "#1a1a2e",
+          fontFamily: "'M PLUS Rounded 1c','Noto Sans JP',sans-serif",
+          whiteSpace: "nowrap",
+          lineHeight: 1,
+        }}>免許メーカー</span>
       </div>
     </div>
   );
 }
 
-// ── Download (Canvas) ───────────────────────────────────────────────────────────────────────────────────
-// 台紙サイズ: 1075×650px をそのまま座標空間として使用（FIT WARSと同じ方式）
-// ダウンロード時は ctx.scale(SCALE, SCALE) で拡大するだけ
-const CARD_W  = 1075;  // 台紙幅（px）
-const CARD_H  = 650;   // 台紙高（px）
-const SCALE   = 3;     // 拡大倍率（3倍 = 3225×1950px）
+// ── Canvas定数（台紙1075×650px・実測値）──────────────────────────────────────
+const CARD_W  = 1075;
+const CARD_H  = 650;
 
-// 各フィールドの座標（台紙1075×650px・アノテーション画像で確定した正確な値）
-// ラベル右端 x=154（テキスト入力開始: x=160）
-// 入力エリア: x=160〜647（写真左端）
-// 写真エリア: x=647〜1036（安全認定スタンプ x=527〜666 より右なので被らない）
-// mm調整後の座標（1mm=12.56px横, 1mm=12.04px縦）
-// 名前: 右に4mm(+50px) → x=210
-const NAME_X   = 210;  // 名前入力開始（+4mm）
-// 長所: 右に4mm(+50px) → x=210
-const KYOSHO_X = 210;  // 長所入力開始（+4mm）
-// 日付: 右に6mm(+75px) → x=235
-const DATE_X   = 235;  // 日付入力開始（+6mm）
-// 約束: 下に1mm(+12px) → y=374
-const YAKUSOKU_X = 210; // 約束入力開始（名前と同じ）
-// 将来の夢: 右に2mm(+25px) → x=185
-const YUME_X   = 185;  // 将来の夢入力開始（+2mm）
-// 発行: 右に2mm(+25px) → x=185
-const HAKKO_X  = 185;  // 発行入力開始（+2mm）
-const LABEL_R = 160;   // テキスト入力基準位置（x=160）
-const PHOTO_L = 647;   // 写真エリア左端（確定値: x=647）
-const CARD_R  = 1036;  // カード右端（写真エリア右端）
-const NAME_Y1 = 41;    // 名前行上端（行1: y=41〜101）
-const NAME_Y2 = 101;   // 名前行下端
-const KYOSHO_Y1 = 136; // 長所行上端（行3: y=136〜179）
-const KYOSHO_Y2 = 179; // 長所行下端
-const DATE_Y1 = 179;   // 日付行上端（行4: y=179〜223）
-const DATE_Y2 = 223;   // 日付行下端
-const YAKUSOKU_Y1 = 374; // 約束エリア上端（+1mm下: y=374）
-const YAKUSOKU_Y2 = 511; // 約束エリア下端
-const YUME_Y1 = 511;   // 将来の夢行上端（行9+10: y=511〜558）
-const YUME_Y2 = 558;   // 将来の夢行下端
-const HAKKO_Y1 = 558;  // 発行行上端（行11: y=558〜604）
-const HAKKO_Y2 = 604;  // 発行行下端
-const PHOTO_Y1 = 41;   // 写真エリア上端（y=41〜604）
-const PHOTO_Y2 = 604;  // 写真エリア下端
+// 各フィールドの座標（実測値）
+const NAME_X    = 165;   // 名前入力開始 x
+const NAME_Y1   = 46;    // 名前行上端
+const NAME_Y2   = 100;   // 名前行下端
 
-// JP-ID03N用紙定数（はがきサイズ縦向き: 100×148.5mm）
-// カードを横向き（85.6×54mm）で上下に2枚配置
+const KYOSHO_X  = 165;   // 長所入力開始 x
+const KYOSHO_Y1 = 141;   // 長所行上端
+const KYOSHO_Y2 = 183;   // 長所行下端
+
+const DATE_X    = 165;   // 日付入力開始 x
+const DATE_Y1   = 183;   // 日付行上端
+const DATE_Y2   = 228;   // 日付行下端
+
+const YAKUSOKU_X  = 220; // 約束入力開始 x（優良ボックスの右: x=220）
+const YAKUSOKU_Y1 = 290; // 約束エリア上端（帯下端 y=286の下）
+const YAKUSOKU_Y2 = 516; // 約束エリア下端
+
+const YUME_X    = 165;   // 将来の夢入力開始 x
+const YUME_Y1   = 516;   // 将来の夢行上端
+const YUME_Y2   = 558;   // 将来の夢行下端
+
+const HAKKO_X   = 165;   // 発行入力開始 x
+const HAKKO_Y1  = 558;   // 発行行上端
+const HAKKO_Y2  = 603;   // 発行行下端
+
+// 写真エリア（実測値: x=682〜1011, y=183〜603）
+const PHOTO_L   = 682;   // 写真エリア左端
+const PHOTO_R   = 1011;  // 写真エリア右端
+const PHOTO_Y1  = 183;   // 写真エリア上端
+const PHOTO_Y2  = 603;   // 写真エリア下端
+
+// テキスト最大幅（写真左端まで）
+const TEXT_MAX_W = PHOTO_L - 10; // 672px
+
+// はがきサイズ（100×148.5mm @ 300dpi）
 const DPI = 300;
 const MM = DPI / 25.4;
-const SHEET_W = Math.round(100 * MM);    // 1181px（はがき幅100mm）
-const SHEET_H = Math.round(148.5 * MM);  // 1754px（はがき高148.5mm）
-// カードサイズ（85.6×54mm）を300dpiでpx変換
+const SHEET_W = Math.round(100 * MM);    // 1181px
+const SHEET_H = Math.round(148.5 * MM);  // 1754px
+// カードサイズ（85.6×54mm @ 300dpi）
 const CARD_PX_W = Math.round(85.6 * MM);  // 1011px
 const CARD_PX_H = Math.round(54 * MM);    // 638px
-// 台紙画像（1075×650px）をカードサイズ（1011×638px）にスケール
-const FIT_SCALE = CARD_PX_W / CARD_W;  // 1011/1075 = 0.9405
-// 実際のカード描画サイズ
-const SCALED_W = Math.round(CARD_W * FIT_SCALE);  // = CARD_PX_W = 1011px
-const SCALED_H = Math.round(CARD_H * FIT_SCALE);  // = CARD_PX_H = 638px
-// 上下余白（13.5mm×300dpi = 159px）・間隔（13.5mm = 159px）
-const MARGIN_TOP = Math.round(13.5 * MM);   // 159px
-const MARGIN_L   = Math.round(7.2 * MM);    // 85px
-const GAP        = Math.round(13.5 * MM);   // 159px
+// 台紙画像をカードサイズにスケール
+const FIT_SCALE = CARD_PX_W / CARD_W;  // 1011/1075 ≈ 0.9405
+const SCALED_W = Math.round(CARD_W * FIT_SCALE);
+const SCALED_H = Math.round(CARD_H * FIT_SCALE);
+const MARGIN_TOP = Math.round(13.5 * MM);
+const MARGIN_L   = Math.round(7.2 * MM);
+const GAP        = Math.round(13.5 * MM);
 
 function loadImg(src: string): Promise<HTMLImageElement> {
   return new Promise((res, rej) => {
@@ -324,26 +471,11 @@ function loadImg(src: string): Promise<HTMLImageElement> {
   });
 }
 
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-}
-
 async function renderLicenseCardOnCanvas(
   ctx: CanvasRenderingContext2D,
   data: LicenseData,
   baseImg: HTMLImageElement
 ) {
-  // FIT WARSと同じ方式: ctx.scale(SCALE, SCALE)で座標空間は1075×650のまま
   // 台紙画像を描画
   ctx.drawImage(baseImg, 0, 0, CARD_W, CARD_H);
 
@@ -358,29 +490,56 @@ async function renderLicenseCardOnCanvas(
     return `${parts[0]}年${parseInt(parts[1])}月${parseInt(parts[2])}日`;
   };
 
-  // ── 名前: x=NAME_X(+4mm右), y=中央 (NAME_Y1+NAME_Y2)/2 ──
+  // ── 写真（テキストより先に描画してテキストが上に来るようにする）──
+  const photoW = PHOTO_R - PHOTO_L;  // 329px
+  const photoH = PHOTO_Y2 - PHOTO_Y1; // 420px
+  const displayPhoto = data.aiPhotoUrl || data.photoUrl;
+  if (displayPhoto) {
+    try {
+      const photoImg = await loadImg(displayPhoto);
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(PHOTO_L, PHOTO_Y1, photoW, photoH);
+      ctx.clip();
+      // object-cover + object-top
+      const pa = photoImg.width / photoImg.height;
+      const ba = photoW / photoH;
+      let dw: number, dh: number, dx: number, dy: number;
+      if (pa > ba) {
+        dh = photoH; dw = dh * pa;
+        dx = PHOTO_L - (dw - photoW) / 2; dy = PHOTO_Y1;
+      } else {
+        dw = photoW; dh = dw / pa;
+        dx = PHOTO_L; dy = PHOTO_Y1;
+      }
+      ctx.drawImage(photoImg, dx, dy, dw, dh);
+      ctx.restore();
+    } catch { /* skip */ }
+  }
+
+  // ── 名前 ──
   if (data.nickname) {
     const fs = data.nickname.length > 10 ? 18 : data.nickname.length > 6 ? 22 : 26;
     ctx.font = `bold ${fs}px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
-    ctx.fillText(data.nickname, NAME_X, (NAME_Y1 + NAME_Y2) / 2, PHOTO_L - NAME_X - 10);
+    ctx.fillText(data.nickname, NAME_X, (NAME_Y1 + NAME_Y2) / 2, TEXT_MAX_W - NAME_X);
   }
 
-  // ── 長所: x=KYOSHO_X(+4mm右), y=中央 (KYOSHO_Y1+KYOSHO_Y2)/2 ──
+  // ── 長所 ──
   if (data.strength) {
     const fs = data.strength.length > 12 ? 14 : data.strength.length > 8 ? 16 : 18;
     ctx.font = `600 ${fs}px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
-    ctx.fillText(data.strength, KYOSHO_X, (KYOSHO_Y1 + KYOSHO_Y2) / 2, PHOTO_L - KYOSHO_X - 10);
+    ctx.fillText(data.strength, KYOSHO_X, (KYOSHO_Y1 + KYOSHO_Y2) / 2, TEXT_MAX_W - KYOSHO_X);
   }
 
-  // ── 日付: x=DATE_X(+6mm右), y=中央 (DATE_Y1+DATE_Y2)/2, 文字小さめ ──
+  // ── 日付 ──
   if (data.date) {
     ctx.font = `600 13px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
-    ctx.fillText(formatDate(data.date), DATE_X, (DATE_Y1 + DATE_Y2) / 2, PHOTO_L - DATE_X - 10);
+    ctx.fillText(formatDate(data.date), DATE_X, (DATE_Y1 + DATE_Y2) / 2, TEXT_MAX_W - DATE_X);
   }
 
-  // ── 約束（複数行折り返し）: x=YAKUSOKU_X, y=YAKUSOKU_Y1(+1mm下)〜, 文字サイズ2px小さめ ──
+  // ── 約束（複数行折り返し）──
   if (data.promise) {
-    const areaW = PHOTO_L - YAKUSOKU_X - 10;
+    const areaW = TEXT_MAX_W - YAKUSOKU_X;
     const areaH = YAKUSOKU_Y2 - YAKUSOKU_Y1;
     const charCount = data.promise.length;
     const fs = charCount > 40 ? 12 : charCount > 20 ? 15 : 18;
@@ -405,48 +564,16 @@ async function renderLicenseCardOnCanvas(
     }
   }
 
-  // ── 将来の夢: x=YUME_X(+2mm右), y=中央 (YUME_Y1+YUME_Y2)/2 ──
+  // ── 将来の夢 ──
   if (data.dream) {
     const fs = data.dream.length > 10 ? 14 : 16;
     ctx.font = `600 ${fs}px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
-    ctx.fillText(data.dream, YUME_X, (YUME_Y1 + YUME_Y2) / 2, PHOTO_L - YUME_X - 10);
+    ctx.fillText(data.dream, YUME_X, (YUME_Y1 + YUME_Y2) / 2, TEXT_MAX_W - YUME_X);
   }
 
-  // ── 発行(免許メーカー): x=HAKKO_X(+2mm右), y=中央 (HAKKO_Y1+HAKKO_Y2)/2 ──
+  // ── 発行(免許メーカー) ──
   ctx.font = `600 13px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
-  ctx.fillText("免許メーカー", HAKKO_X, (HAKKO_Y1 + HAKKO_Y2) / 2, PHOTO_L - HAKKO_X - 10);
-
-  // ── 写真: x=PHOTO_L(647), y=PHOTO_Y1(41), w=CARD_R-PHOTO_L(389px), h=PHOTO_Y2-PHOTO_Y1(563px) ──
-  // 安全認定スタンプ(x=527〜666)より右(x=647〜)から始まるので被らない
-  const photoX = PHOTO_L;
-  const photoY = PHOTO_Y1;
-  const photoW = CARD_R - PHOTO_L;  // 389px
-  const photoH = PHOTO_Y2 - PHOTO_Y1;  // 563px
-  const displayPhoto = data.aiPhotoUrl || data.photoUrl;
-  if (displayPhoto) {
-    try {
-      const photoImg = await loadImg(displayPhoto);
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(photoX, photoY, photoW, photoH);
-      ctx.clip();
-      // object-cover + object-top
-      const pa = photoImg.width / photoImg.height;
-      const ba = photoW / photoH;
-      let dw: number, dh: number, dx: number, dy: number;
-      if (pa > ba) {
-        // 横長写真 → 高さに合わせて横中央
-        dh = photoH; dw = dh * pa;
-        dx = photoX - (dw - photoW) / 2; dy = photoY;
-      } else {
-        // 縦長写真 → 幅に合わせて上揃え（object-top）
-        dw = photoW; dh = dw / pa;
-        dx = photoX; dy = photoY;
-      }
-      ctx.drawImage(photoImg, dx, dy, dw, dh);
-      ctx.restore();
-    } catch { /* skip */ }
-  }
+  ctx.fillText("免許メーカー", HAKKO_X, (HAKKO_Y1 + HAKKO_Y2) / 2, TEXT_MAX_W - HAKKO_X);
 }
 
 async function downloadLicenseSheet(card1: LicenseData, card2: LicenseData) {
@@ -458,20 +585,18 @@ async function downloadLicenseSheet(card1: LicenseData, card2: LicenseData) {
   ctx.fillRect(0, 0, SHEET_W, SHEET_H);
   const baseImg = await loadImg(LICENSE_CARD_BASE_URL);
 
-  // 1枚目: ctx.save → translate → scale → 描画 → restore
-  // FIT_SCALEのみ使用（台紙画像1075×650をカードサイズ1011×638にスケール）
   ctx.save();
   ctx.translate(MARGIN_L, MARGIN_TOP);
   ctx.scale(FIT_SCALE, FIT_SCALE);
   await renderLicenseCardOnCanvas(ctx, card1, baseImg);
   ctx.restore();
 
-  // 2枚目
   ctx.save();
   ctx.translate(MARGIN_L, MARGIN_TOP + SCALED_H + GAP);
   ctx.scale(FIT_SCALE, FIT_SCALE);
   await renderLicenseCardOnCanvas(ctx, card2, baseImg);
   ctx.restore();
+
   const blob = await new Promise<Blob>((res, rej) =>
     canvas.toBlob((b) => b ? res(b) : rej(new Error("toBlob null")), "image/png")
   );
@@ -499,317 +624,406 @@ function LicenseForm({
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
-
-  const convertToCarStyle = trpc.license.convertToCarStyle.useMutation({
-    onSuccess: (result) => {
-      onChange({ aiPhotoUrl: result.imageUrl });
-      toast.success("イラスト変換が完了しました！");
-    },
-    onError: (err) => {
-      toast.error(`変換に失敗しました: ${err.message}`);
-    },
-  });
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const convertToCarStyle = trpc.license.convertToCarStyle.useMutation();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (ev) => { setCropSrc(ev.target?.result as string); };
+    reader.onload = (ev) => {
+      const result = ev.target?.result as string;
+      setCropSrc(result);
+    };
     reader.readAsDataURL(file);
+    e.target.value = "";
   };
 
   const handleCropDone = (croppedUrl: string) => {
-    setCropSrc(null);
     onChange({ photoUrl: croppedUrl, photoFile: null, aiPhotoUrl: null });
+    setCropSrc(null);
   };
 
-  const handleAIConvert = async () => {
-    if (!data.photoUrl) return;
-    toast.info("AIでイラスト変換中...");
-    // data.photoUrl is a data URL (data:image/jpeg;base64,...)
-    const base64 = data.photoUrl.split(",")[1];
-    if (!base64) { toast.error("写真データが無効です"); return; }
-    convertToCarStyle.mutate({ photoBase64: base64 });
+  const handleGenerateAI = async () => {
+    if (!data.photoUrl) {
+      toast.error("まず写真を選択してください");
+      return;
+    }
+    setIsGeneratingAI(true);
+    try {
+      // base64に変換してAPIに送る
+      const base64 = data.photoUrl.split(",")[1] || data.photoUrl;
+      const mimeMatch = data.photoUrl.match(/data:([^;]+);/);
+      const mimeType = mimeMatch ? mimeMatch[1] : "image/jpeg";
+      const result = await convertToCarStyle.mutateAsync({ photoBase64: base64, mimeType });
+      onChange({ aiPhotoUrl: result.imageUrl });
+      toast.success("AIイラスト生成完了！");
+    } catch {
+      toast.error("AI生成に失敗しました");
+    } finally {
+      setIsGeneratingAI(false);
+    }
   };
 
-  const macaronColors: Record<string, string> = {
-    nickname: "#ff99cc",
-    strength: "#ffee99",
-    date: "#99ff99",
-    promise: "#99ccff",
-    dream: "#cc99ff",
-  };
-
-  const inputStyle = (colorKey: string): React.CSSProperties => ({
+  const inputStyle: React.CSSProperties = {
     width: "100%",
-    padding: "12px 15px",
-    border: "none",
-    borderRadius: "25px",
-    fontFamily: "'M PLUS Rounded 1c',sans-serif",
-    fontSize: "1rem",
-    fontWeight: "bold",
-    color: "#333",
+    padding: "12px 16px",
+    borderRadius: "16px",
+    border: "3px solid transparent",
+    fontSize: "16px",
+    fontFamily: "'M PLUS Rounded 1c', 'Noto Sans JP', sans-serif",
     outline: "none",
-    backgroundColor: macaronColors[colorKey] || "#f0f0f0",
-    boxShadow: "inset 0 4px 6px rgba(255,255,255,0.8),inset 0 -4px 6px rgba(0,0,0,0.2),0 4px 0 rgba(0,0,0,0.3)",
-    transition: "transform 0.1s",
-    marginBottom: "5px",
-    boxSizing: "border-box" as const,
-  });
-
-  const labelStyle: React.CSSProperties = {
-    display: "block",
-    marginBottom: "5px",
-    fontSize: "0.9rem",
-    fontWeight: "bold",
-    color: "#fff",
-    fontFamily: "'DotGothic16',sans-serif",
+    transition: "all 0.2s",
+    boxSizing: "border-box",
   };
 
   return (
-    <>
+    <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
       {cropSrc && (
-        <CropModal imageSrc={cropSrc} onDone={handleCropDone} onCancel={() => setCropSrc(null)} />
+        <CropModal
+          imageSrc={cropSrc}
+          onDone={handleCropDone}
+          onCancel={() => setCropSrc(null)}
+        />
       )}
 
       {/* ニックネーム */}
-      <div style={{ marginBottom: "15px" }}>
-        <label style={labelStyle}>ニックネーム</label>
-        <input type="text" style={inputStyle("nickname")} placeholder="(例) サンプルたろう" value={data.nickname} onChange={(e) => onChange({ nickname: e.target.value })} />
+      <div>
+        <label style={{ display: "block", marginBottom: "6px", fontWeight: 700, fontSize: "13px", color: "#fff", fontFamily: "'DotGothic16', sans-serif", letterSpacing: "1px" }}>ニックネーム</label>
+        <input
+          type="text"
+          placeholder="(例) サンプルたろう"
+          value={data.nickname}
+          onChange={(e) => onChange({ nickname: e.target.value })}
+          style={{ ...inputStyle, background: "linear-gradient(135deg, #ffe0f0, #ffd6e8)", color: "#1a1a2e" }}
+        />
       </div>
 
       {/* 長所 */}
-      <div style={{ marginBottom: "15px" }}>
-        <label style={labelStyle}>長所</label>
-        <input type="text" style={inputStyle("strength")} placeholder="(例) たくさんたべる" value={data.strength} onChange={(e) => onChange({ strength: e.target.value })} />
+      <div>
+        <label style={{ display: "block", marginBottom: "6px", fontWeight: 700, fontSize: "13px", color: "#fff", fontFamily: "'DotGothic16', sans-serif", letterSpacing: "1px" }}>長所</label>
+        <input
+          type="text"
+          placeholder="(例) たくさんたべる"
+          value={data.strength}
+          onChange={(e) => onChange({ strength: e.target.value })}
+          style={{ ...inputStyle, background: "linear-gradient(135deg, #fff0d0, #ffe8b0)", color: "#1a1a2e" }}
+        />
       </div>
 
       {/* 日付 */}
-      <div style={{ marginBottom: "15px" }}>
-        <label style={labelStyle}>日付</label>
-        <input type="date" style={inputStyle("date")} value={data.date} onChange={(e) => onChange({ date: e.target.value })} />
+      <div>
+        <label style={{ display: "block", marginBottom: "6px", fontWeight: 700, fontSize: "13px", color: "#fff", fontFamily: "'DotGothic16', sans-serif", letterSpacing: "1px" }}>日付</label>
+        <input
+          type="date"
+          value={data.date}
+          onChange={(e) => onChange({ date: e.target.value })}
+          style={{ ...inputStyle, background: "linear-gradient(135deg, #d0f0ff, #b8e8ff)", color: "#1a1a2e" }}
+        />
       </div>
 
       {/* 約束 */}
-      <div style={{ marginBottom: "15px" }}>
-        <label style={labelStyle}>約束</label>
-        <input type="text" style={inputStyle("promise")} placeholder="(例) ゲームは1日1時間" value={data.promise} onChange={(e) => onChange({ promise: e.target.value })} />
+      <div>
+        <label style={{ display: "block", marginBottom: "6px", fontWeight: 700, fontSize: "13px", color: "#fff", fontFamily: "'DotGothic16', sans-serif", letterSpacing: "1px" }}>約束</label>
+        <input
+          type="text"
+          placeholder="(例) ゲームは1日1時間"
+          value={data.promise}
+          onChange={(e) => onChange({ promise: e.target.value })}
+          style={{ ...inputStyle, background: "linear-gradient(135deg, #d0ffd8, #b8f0c0)", color: "#1a1a2e" }}
+        />
       </div>
 
       {/* 将来の夢 */}
-      <div style={{ marginBottom: "15px" }}>
-        <label style={labelStyle}>将来の夢</label>
-        <input type="text" style={inputStyle("dream")} placeholder="(例) けいさつかん" value={data.dream} onChange={(e) => onChange({ dream: e.target.value })} />
+      <div>
+        <label style={{ display: "block", marginBottom: "6px", fontWeight: 700, fontSize: "13px", color: "#fff", fontFamily: "'DotGothic16', sans-serif", letterSpacing: "1px" }}>将来の夢</label>
+        <input
+          type="text"
+          placeholder="(例) けいさつかん"
+          value={data.dream}
+          onChange={(e) => onChange({ dream: e.target.value })}
+          style={{ ...inputStyle, background: "linear-gradient(135deg, #e8d0ff, #d8b8ff)", color: "#1a1a2e" }}
+        />
       </div>
 
       {/* 写真 */}
-      <div style={{ marginBottom: "15px" }}>
-        <label style={labelStyle}>写真</label>
-        <label style={{ display: "block", width: "100%", background: "linear-gradient(to bottom,#4da6ff,#0066cc)", color: "white", textAlign: "center", padding: "15px", borderRadius: "10px", cursor: "pointer", border: "3px solid #003366", boxShadow: "inset 0 2px 5px rgba(255,255,255,0.5),0 4px 0 #002244", fontWeight: "bold", marginTop: "10px", fontFamily: "'DotGothic16',sans-serif", boxSizing: "border-box" as const }}>
-          写真を選択
-          <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFileChange} />
-        </label>
-
+      <div>
+        <label style={{ display: "block", marginBottom: "6px", fontWeight: 700, fontSize: "13px", color: "#fff", fontFamily: "'DotGothic16', sans-serif", letterSpacing: "1px" }}>写真</label>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileChange}
+          style={{ display: "none" }}
+        />
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            style={{
+              flex: 1, minWidth: "120px", padding: "12px 16px",
+              background: "linear-gradient(135deg, #ff66b2, #cc0066)",
+              border: "none", borderRadius: "16px", color: "#fff",
+              fontWeight: 700, fontSize: "14px", cursor: "pointer",
+              fontFamily: "'DotGothic16', sans-serif",
+              boxShadow: "0 4px 0 #880044",
+            }}
+          >
+            {data.photoUrl ? "写真を変更" : "写真を選択"}
+          </button>
+          {data.photoUrl && (
+            <button
+              onClick={handleGenerateAI}
+              disabled={isGeneratingAI}
+              style={{
+                flex: 1, minWidth: "120px", padding: "12px 16px",
+                background: isGeneratingAI
+                  ? "rgba(255,255,255,0.2)"
+                  : "linear-gradient(135deg, #00d4ff, #0088cc)",
+                border: "none", borderRadius: "16px", color: "#fff",
+                fontWeight: 700, fontSize: "13px", cursor: isGeneratingAI ? "not-allowed" : "pointer",
+                fontFamily: "'DotGothic16', sans-serif",
+                boxShadow: isGeneratingAI ? "none" : "0 4px 0 #005588",
+              }}
+            >
+              {isGeneratingAI ? "生成中..." : "AIイラスト化"}
+            </button>
+          )}
+        </div>
         {data.photoUrl && (
-          <div style={{ marginTop: "10px", display: "flex", gap: "8px", alignItems: "center" }}>
-            <img src={data.aiPhotoUrl || data.photoUrl} alt="preview" style={{ width: "60px", height: "80px", objectFit: "cover", borderRadius: "6px", border: "2px solid #ff66b2" }} />
-            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <button
-                onClick={handleAIConvert}
-                disabled={convertToCarStyle.isPending}
-                style={{ padding: "8px 14px", background: convertToCarStyle.isPending ? "rgba(255,255,255,0.1)" : "linear-gradient(to bottom,#ff99cc,#ff66b2)", color: convertToCarStyle.isPending ? "rgba(255,255,255,0.3)" : "#fff", border: "2px solid #cc0066", borderRadius: "8px", fontWeight: 700, fontSize: "12px", cursor: convertToCarStyle.isPending ? "not-allowed" : "pointer", boxShadow: convertToCarStyle.isPending ? "none" : "0 3px 0 #880044", fontFamily: "'DotGothic16',sans-serif" }}
-              >
-                {convertToCarStyle.isPending ? "変換中..." : "✨ AIでイラスト変換"}
-              </button>
-              {data.aiPhotoUrl && (
-                <button onClick={() => onChange({ aiPhotoUrl: null })} style={{ padding: "6px 10px", background: "transparent", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: "6px", fontSize: "11px", cursor: "pointer", fontFamily: "'DotGothic16',sans-serif" }}>
-                  元の写真に戻す
-                </button>
-              )}
-            </div>
+          <div style={{ marginTop: "8px", display: "flex", gap: "8px", alignItems: "center" }}>
+            <img
+              src={data.aiPhotoUrl || data.photoUrl}
+              alt="preview"
+              style={{ width: "60px", height: "80px", objectFit: "cover", borderRadius: "8px", border: "2px solid rgba(255,255,255,0.3)" }}
+            />
+            <span style={{ fontSize: "12px", color: "rgba(255,255,255,0.7)", fontFamily: "'DotGothic16', sans-serif" }}>
+              {data.aiPhotoUrl ? "AIイラスト使用中" : "写真選択済み"}
+            </span>
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 }
 
 // ── Main Page ──────────────────────────────────────────────────────────────────
 export default function LicenseMaker() {
   const [, setLocation] = useLocation();
-  const [card1, setCard1] = useState<LicenseData>({ ...INITIAL_LICENSE });
-  const [card2, setCard2] = useState<LicenseData>({ ...INITIAL_LICENSE });
+  const [card1, setCard1] = useState<LicenseData>(INITIAL_LICENSE);
+  const [card2, setCard2] = useState<LicenseData>(INITIAL_LICENSE);
   const [activeCard, setActiveCard] = useState<1 | 2>(1);
-  const [isDownloading, setIsDownloading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
-  const updateCard1 = useCallback((u: Partial<LicenseData>) => setCard1((p) => ({ ...p, ...u })), []);
-  const updateCard2 = useCallback((u: Partial<LicenseData>) => setCard2((p) => ({ ...p, ...u })), []);
+  const activeData = activeCard === 1 ? card1 : card2;
+  const setActiveData = (u: Partial<LicenseData>) => {
+    if (activeCard === 1) setCard1((prev) => ({ ...prev, ...u }));
+    else setCard2((prev) => ({ ...prev, ...u }));
+  };
 
-  const handleCreate = useCallback(() => {
+  const handleCreate = () => {
+    if (!activeData.nickname) {
+      toast.error("ニックネームを入力してください");
+      return;
+    }
     setShowPreview(true);
-    setTimeout(() => {
-      document.getElementById("preview-section")?.scrollIntoView({ behavior: "smooth" });
-    }, 100);
-  }, []);
+  };
 
-  const handleDownload = useCallback(async () => {
+  const handleDownload = async () => {
     setIsDownloading(true);
-    toast.info("免許証シートを生成中...");
     try {
-      await downloadLicenseSheet(card1, card2);
-      toast.success("免許証シートを保存しました！");
-    } catch (err) {
-      toast.error(`保存に失敗しました: ${err instanceof Error ? err.message : "不明なエラー"}`);
+      await downloadLicenseSheet(card1, card2.nickname ? card2 : card1);
+    } catch (e) {
+      toast.error("ダウンロードに失敗しました");
+      console.error(e);
     } finally {
       setIsDownloading(false);
     }
-  }, [card1, card2]);
-
-  const activeData = activeCard === 1 ? card1 : card2;
-  const activeUpdate = activeCard === 1 ? updateCard1 : updateCard2;
-
-  const btnStyle = (color: string, shadow: string): React.CSSProperties => ({
-    flex: 1,
-    padding: "15px 5px",
-    border: `2px solid ${shadow}`,
-    borderRadius: "10px",
-    fontFamily: "'DotGothic16',sans-serif",
-    fontWeight: "bold",
-    fontSize: "1rem",
-    cursor: "pointer",
-    boxShadow: `0 4px 0 rgba(0,0,0,0.4)`,
-    backgroundColor: color,
-    color: "white",
-    textAlign: "center" as const,
-    transition: "transform 0.1s",
-  });
+  };
 
   return (
-    <div style={{ fontFamily: "'M PLUS Rounded 1c',sans-serif", backgroundColor: "#2b1b4d", backgroundImage: "radial-gradient(circle at 20% 30%,rgba(255,102,178,0.15) 0%,transparent 50%),radial-gradient(circle at 80% 70%,rgba(51,204,255,0.15) 0%,transparent 50%)", color: "#fff", minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", padding: "20px" }}>
+    <div style={{
+      minHeight: "100vh",
+      background: "linear-gradient(135deg, #1a0533 0%, #0d1b4a 50%, #0a2a1a 100%)",
+      fontFamily: "'M PLUS Rounded 1c', 'Noto Sans JP', sans-serif",
+    }}>
+      {/* ヘッダー */}
+      <div style={{ padding: "16px 20px", display: "flex", alignItems: "center", gap: "12px" }}>
+        <button
+          onClick={() => setLocation("/")}
+          style={{
+            background: "rgba(255,255,255,0.1)", border: "2px solid rgba(255,255,255,0.3)",
+            borderRadius: "12px", color: "#fff", padding: "8px 16px",
+            fontSize: "14px", cursor: "pointer", fontFamily: "'DotGothic16', sans-serif",
+          }}
+        >← ホームに戻る</button>
+      </div>
 
-      {/* Header */}
-      <header style={{ textAlign: "center", marginBottom: "30px", marginTop: "20px", width: "100%", maxWidth: "1000px" }}>
-        <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: "16px" }}>
-          <button onClick={() => setLocation("/")} style={{ display: "flex", alignItems: "center", gap: "6px", padding: "8px 16px", background: "rgba(255,102,178,0.2)", border: "2px solid #ff66b2", borderRadius: "20px", color: "#fff", fontSize: "13px", fontWeight: 600, cursor: "pointer", fontFamily: "'DotGothic16',sans-serif", boxShadow: "0 3px 0 #880044" }}>
-            ← ホームに戻る
-          </button>
-        </div>
-        <img src={LICENSE_LOGO_URL} alt="免許メーカー" style={{ width: "min(280px,70vw)", marginBottom: "10px" }} />
-        <div style={{ fontFamily: "'DotGothic16',sans-serif", fontSize: "1rem", marginTop: "10px", lineHeight: 1.6 }}>
-          君だけのオリジナルの免許を作ろう！<br />
-          <span style={{ fontFamily: "'Press Start 2P',cursive", fontSize: "0.65em", color: "#33ccff" }}>MAKE YOUR OWN ORIGINAL LICENCE!</span>
-        </div>
-      </header>
+      {/* ロゴ */}
+      <div style={{ textAlign: "center", padding: "0 20px 20px" }}>
+        <img src={LICENSE_LOGO_URL} alt="免許メーカー" style={{ maxWidth: "200px", height: "auto" }} />
+        <p style={{ color: "rgba(255,255,255,0.9)", fontSize: "16px", margin: "8px 0 0", fontFamily: "'DotGothic16', sans-serif" }}>
+          君だけのオリジナルの免許を作ろう！
+        </p>
+        <p style={{ color: "#00d4ff", fontSize: "12px", margin: "4px 0 0", fontFamily: "'DotGothic16', sans-serif", letterSpacing: "2px" }}>
+          MAKE YOUR OWN ORIGINAL LICENCE!
+        </p>
+      </div>
 
-      {/* Main layout */}
-      <main style={{ display: "flex", flexWrap: "wrap", gap: "30px", justifyContent: "center", width: "100%", maxWidth: "1000px" }}>
-
-        {/* Left: Input Form */}
-        <div style={{ backgroundColor: "#11082f", border: "8px solid", borderImage: "linear-gradient(to bottom right,#ff66b2,#33ccff,#ffff66) 1", padding: "20px", width: "100%", maxWidth: "400px", boxShadow: "0 10px 30px rgba(0,0,0,0.5)", boxSizing: "border-box" as const }}>
-
+      {/* メインコンテンツ */}
+      <div style={{
+        maxWidth: "1100px", margin: "0 auto", padding: "0 16px 40px",
+        display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px",
+      }}
+        className="license-grid"
+      >
+        {/* 左: 入力フォーム */}
+        <div style={{
+          background: "rgba(255,255,255,0.05)", borderRadius: "20px",
+          border: "2px solid rgba(255,255,255,0.15)", padding: "24px",
+          backdropFilter: "blur(10px)",
+        }}>
           {/* カード切り替えタブ */}
-          <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
-            {([1, 2] as const).map((n) => (
-              <button key={n} onClick={() => setActiveCard(n)} style={{ flex: 1, padding: "10px", border: "2px solid", borderColor: activeCard === n ? "#ff66b2" : "#555", borderRadius: "10px", background: activeCard === n ? "linear-gradient(to bottom,#ff66b2,#cc0066)" : "rgba(255,255,255,0.05)", color: "#fff", fontWeight: 700, fontSize: "14px", cursor: "pointer", fontFamily: "'DotGothic16',sans-serif", boxShadow: activeCard === n ? "0 3px 0 #880044" : "none", transition: "all 0.2s" }}>
-                {n === 1 ? "🚗 1枚目" : "🏎️ 2枚目"}
+          <div style={{ display: "flex", gap: "8px", marginBottom: "20px" }}>
+            {([1, 2] as const).map((num) => (
+              <button
+                key={num}
+                onClick={() => setActiveCard(num)}
+                style={{
+                  flex: 1, padding: "10px",
+                  background: activeCard === num
+                    ? "linear-gradient(135deg, #ff66b2, #cc0066)"
+                    : "rgba(255,255,255,0.1)",
+                  border: activeCard === num ? "2px solid #ff66b2" : "2px dashed rgba(255,255,255,0.3)",
+                  borderRadius: "12px", color: "#fff",
+                  fontWeight: 700, fontSize: "14px", cursor: "pointer",
+                  fontFamily: "'DotGothic16', sans-serif",
+                  boxShadow: activeCard === num ? "0 4px 0 #880044" : "none",
+                }}
+              >
+                {num === 1 ? "🚗 1枚目" : "🏎️ 2枚目"}
               </button>
             ))}
           </div>
 
-          <h2 style={{ textAlign: "center", fontSize: "1.5rem", marginBottom: "20px", borderBottom: "2px dashed #555", paddingBottom: "10px", fontFamily: "'DotGothic16',sans-serif" }}>
-            入力フォーム<br />
-            <span style={{ fontFamily: "'Press Start 2P',cursive", fontSize: "0.5em", color: "#ccc" }}>INPUT FORM</span>
-          </h2>
-
-          <LicenseForm data={activeData} onChange={activeUpdate} cardNum={activeCard} />
-
-          {/* Action buttons */}
-          <div style={{ display: "flex", gap: "10px", marginTop: "24px" }}>
-            <button
-              onClick={handleCreate}
-              style={btnStyle("#33cc33", "#1a661a")}
-              onMouseDown={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(4px)"; (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
-              onMouseUp={(e) => { (e.currentTarget as HTMLElement).style.transform = ""; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 0 rgba(0,0,0,0.4)"; }}
-            >
-              <span>作成</span><br />
-              <span style={{ fontFamily: "'Press Start 2P',cursive", fontSize: "0.5em" }}>CREATE</span>
-            </button>
-            <button
-              onClick={handleDownload}
-              disabled={isDownloading}
-              style={{ ...btnStyle(isDownloading ? "#555" : "#0088ff", "#004488"), cursor: isDownloading ? "not-allowed" : "pointer", boxShadow: isDownloading ? "none" : "0 4px 0 rgba(0,0,0,0.4)" }}
-              onMouseDown={(e) => { if (!isDownloading) { (e.currentTarget as HTMLElement).style.transform = "translateY(4px)"; (e.currentTarget as HTMLElement).style.boxShadow = "none"; } }}
-              onMouseUp={(e) => { (e.currentTarget as HTMLElement).style.transform = ""; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 0 rgba(0,0,0,0.4)"; }}
-            >
-              {isDownloading ? "⚙️ 生成中..." : <><span>ダウンロード</span><br /><span style={{ fontFamily: "'Press Start 2P',cursive", fontSize: "0.5em" }}>DOWNLOAD</span></>}
-            </button>
+          <div style={{ marginBottom: "8px" }}>
+            <h2 style={{ color: "#fff", fontSize: "18px", margin: "0 0 4px", fontFamily: "'DotGothic16', sans-serif" }}>入力フォーム</h2>
+            <p style={{ color: "#00d4ff", fontSize: "11px", margin: 0, fontFamily: "'DotGothic16', sans-serif", letterSpacing: "2px" }}>INPUT FORM</p>
           </div>
+          <div style={{ height: "1px", background: "rgba(255,255,255,0.2)", margin: "12px 0 16px" }} />
+
+          <LicenseForm
+            data={activeData}
+            onChange={setActiveData}
+            cardNum={activeCard}
+          />
+
+          <button
+            onClick={handleCreate}
+            style={{
+              width: "100%", marginTop: "20px", padding: "16px",
+              background: "linear-gradient(135deg, #00d4ff, #0088cc)",
+              border: "none", borderRadius: "16px", color: "#fff",
+              fontWeight: 700, fontSize: "16px", cursor: "pointer",
+              fontFamily: "'DotGothic16', sans-serif",
+              boxShadow: "0 6px 0 #005588",
+              letterSpacing: "1px",
+            }}
+          >
+            作成 CREATE
+          </button>
         </div>
 
-        {/* Right: Preview */}
-        <div style={{ width: "100%", maxWidth: "450px", display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <div style={{ marginBottom: "15px", textAlign: "center", fontFamily: "'DotGothic16',sans-serif", fontSize: "1.1rem" }}>
-            特別な自分の免許<br />作っちゃおう♪
+        {/* 右: プレビュー */}
+        <div style={{
+          background: "rgba(255,255,255,0.05)", borderRadius: "20px",
+          border: "2px solid rgba(255,255,255,0.15)", padding: "24px",
+          backdropFilter: "blur(10px)",
+        }}>
+          <div style={{ marginBottom: "8px" }}>
+            <h2 style={{ color: "#fff", fontSize: "18px", margin: "0 0 4px", fontFamily: "'DotGothic16', sans-serif" }}>
+              {activeCard === 1 ? "🚗 1枚目プレビュー" : "🏎️ 2枚目プレビュー"}
+            </h2>
+            <p style={{ color: "#00d4ff", fontSize: "11px", margin: 0, fontFamily: "'DotGothic16', sans-serif", letterSpacing: "2px" }}>PREVIEW</p>
           </div>
-          <div style={{ backgroundColor: "#fff9f0", width: "100%", borderRadius: "20px", border: "6px solid #ff66b2", padding: "15px", boxShadow: "0 0 20px rgba(255,102,178,0.4)", backgroundImage: "radial-gradient(#ffccdd 10%,transparent 10%),radial-gradient(#ffccdd 10%,transparent 10%)", backgroundPosition: "0 0,20px 20px", backgroundSize: "40px 40px", boxSizing: "border-box" as const }}>
-            <div style={{ backgroundColor: "rgba(255,255,255,0.9)", borderRadius: "10px", padding: "15px", border: "2px solid #ffe6e6" }}>
-              <div style={{ textAlign: "center", fontSize: "1.1rem", color: "#ff66b2", borderBottom: "2px solid #ff66b2", paddingBottom: "5px", marginBottom: "12px", fontFamily: "'DotGothic16',sans-serif", fontWeight: "bold" }}>
-                {activeCard === 1 ? "🚗 1枚目プレビュー" : "🏎️ 2枚目プレビュー"}
-              </div>
-              <LicenseCardPreview data={activeData} />
-            </div>
-          </div>
-        </div>
-      </main>
+          <div style={{ height: "1px", background: "rgba(255,255,255,0.2)", margin: "12px 0 16px" }} />
 
-      {/* 作成後：2枚並べたプレビューセクション */}
+          <LicenseCardPreview data={activeData} />
+
+          {!showPreview && (
+            <p style={{ textAlign: "center", color: "rgba(255,255,255,0.5)", fontSize: "13px", marginTop: "16px", fontFamily: "'DotGothic16', sans-serif" }}>
+              特別な自分の免許<br />作っちゃおう♪
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* 完成プレビュー（作成ボタン後） */}
       {showPreview && (
-        <section id="preview-section" style={{ width: "100%", maxWidth: "1000px", marginTop: "40px", backgroundColor: "#11082f", border: "8px solid", borderImage: "linear-gradient(to bottom right,#ff66b2,#33ccff,#ffff66) 1", padding: "24px", boxShadow: "0 10px 30px rgba(0,0,0,0.5)", boxSizing: "border-box" as const }}>
-          <h2 style={{ textAlign: "center", fontSize: "1.4rem", marginBottom: "24px", borderBottom: "2px dashed #555", paddingBottom: "10px", fontFamily: "'DotGothic16',sans-serif" }}>
-            🎉 完成プレビュー（2枚）<br />
-            <span style={{ fontFamily: "'Press Start 2P',cursive", fontSize: "0.45em", color: "#33ccff" }}>PREVIEW - 2 CARDS</span>
-          </h2>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "24px", justifyContent: "center" }}>
-            {/* 1枚目 */}
-            <div style={{ width: "100%", maxWidth: "440px" }}>
-              <p style={{ textAlign: "center", fontFamily: "'DotGothic16',sans-serif", fontSize: "1rem", marginBottom: "10px", color: "#ff99cc" }}>🚗 1枚目</p>
-              <div style={{ backgroundColor: "#fff9f0", borderRadius: "16px", border: "4px solid #ff66b2", padding: "12px", boxShadow: "0 0 16px rgba(255,102,178,0.3)", backgroundImage: "radial-gradient(#ffccdd 10%,transparent 10%),radial-gradient(#ffccdd 10%,transparent 10%)", backgroundPosition: "0 0,20px 20px", backgroundSize: "40px 40px" }}>
-                <div style={{ backgroundColor: "rgba(255,255,255,0.9)", borderRadius: "10px", padding: "10px", border: "2px solid #ffe6e6" }}>
-                  <LicenseCardPreview data={card1} />
-                </div>
+        <div style={{
+          maxWidth: "1100px", margin: "0 auto 40px", padding: "0 16px",
+        }}>
+          <div style={{
+            background: "rgba(255,255,255,0.05)", borderRadius: "20px",
+            border: "2px solid rgba(0,212,255,0.4)", padding: "24px",
+            backdropFilter: "blur(10px)",
+          }}>
+            <div style={{ textAlign: "center", marginBottom: "20px" }}>
+              <h2 style={{ color: "#fff", fontSize: "20px", margin: "0 0 4px", fontFamily: "'DotGothic16', sans-serif" }}>
+                🎉 完成プレビュー（2枚）
+              </h2>
+              <p style={{ color: "#00d4ff", fontSize: "11px", margin: 0, fontFamily: "'DotGothic16', sans-serif", letterSpacing: "2px" }}>
+                PREVIEW - 2 CARDS
+              </p>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "20px" }}>
+              <div>
+                <p style={{ textAlign: "center", color: "#ff66b2", fontSize: "13px", marginBottom: "8px", fontFamily: "'DotGothic16', sans-serif" }}>🚗 1枚目</p>
+                <LicenseCardPreview data={card1} />
+              </div>
+              <div>
+                <p style={{ textAlign: "center", color: "#00d4ff", fontSize: "13px", marginBottom: "8px", fontFamily: "'DotGothic16', sans-serif" }}>🏎️ 2枚目</p>
+                <LicenseCardPreview data={card2.nickname ? card2 : card1} />
               </div>
             </div>
-            {/* 2枚目 */}
-            <div style={{ width: "100%", maxWidth: "440px" }}>
-              <p style={{ textAlign: "center", fontFamily: "'DotGothic16',sans-serif", fontSize: "1rem", marginBottom: "10px", color: "#99ccff" }}>🏎️ 2枚目</p>
-              <div style={{ backgroundColor: "#fff9f0", borderRadius: "16px", border: "4px solid #33ccff", padding: "12px", boxShadow: "0 0 16px rgba(51,204,255,0.3)", backgroundImage: "radial-gradient(#ccf0ff 10%,transparent 10%),radial-gradient(#ccf0ff 10%,transparent 10%)", backgroundPosition: "0 0,20px 20px", backgroundSize: "40px 40px" }}>
-                <div style={{ backgroundColor: "rgba(255,255,255,0.9)", borderRadius: "10px", padding: "10px", border: "2px solid #cce6ff" }}>
-                  <LicenseCardPreview data={card2} />
-                </div>
-              </div>
-            </div>
-          </div>
-          <div style={{ textAlign: "center", marginTop: "28px" }}>
-            <p style={{ fontFamily: "'DotGothic16',sans-serif", fontSize: "0.85rem", color: "rgba(255,255,255,0.5)", marginBottom: "16px" }}>
+
+            <p style={{ textAlign: "center", color: "rgba(255,255,255,0.6)", fontSize: "12px", marginBottom: "16px", fontFamily: "'DotGothic16', sans-serif" }}>
               A4用紙（210×297mm）に2枚並べた画像を生成します
             </p>
+
             <button
               onClick={handleDownload}
               disabled={isDownloading}
-              style={{ padding: "18px 40px", border: "2px solid #004488", borderRadius: "12px", fontFamily: "'DotGothic16',sans-serif", fontWeight: "bold", fontSize: "1.1rem", cursor: isDownloading ? "not-allowed" : "pointer", boxShadow: isDownloading ? "none" : "0 5px 0 rgba(0,0,0,0.4)", backgroundColor: isDownloading ? "#555" : "#0088ff", color: "white", transition: "transform 0.1s" }}
-              onMouseDown={(e) => { if (!isDownloading) { (e.currentTarget as HTMLElement).style.transform = "translateY(5px)"; (e.currentTarget as HTMLElement).style.boxShadow = "none"; } }}
-              onMouseUp={(e) => { (e.currentTarget as HTMLElement).style.transform = ""; (e.currentTarget as HTMLElement).style.boxShadow = "0 5px 0 rgba(0,0,0,0.4)"; }}
+              style={{
+                display: "block", width: "100%", maxWidth: "400px", margin: "0 auto",
+                padding: "18px",
+                background: isDownloading
+                  ? "rgba(255,255,255,0.2)"
+                  : "linear-gradient(135deg, #00d4ff, #0088cc)",
+                border: "none", borderRadius: "16px", color: "#fff",
+                fontWeight: 700, fontSize: "18px", cursor: isDownloading ? "not-allowed" : "pointer",
+                fontFamily: "'DotGothic16', sans-serif",
+                boxShadow: isDownloading ? "none" : "0 6px 0 #005588",
+                letterSpacing: "1px",
+              }}
             >
-              {isDownloading ? "⚙️ 生成中..." : <><span>📥 スマホにダウンロードする</span><br /><span style={{ fontFamily: "'Press Start 2P',cursive", fontSize: "0.5em" }}>DOWNLOAD TO PHONE</span></>}
+              {isDownloading ? "生成中..." : "📱 スマホにダウンロードする"}
+              <br />
+              <span style={{ fontSize: "11px", letterSpacing: "2px", opacity: 0.8 }}>DOWNLOAD TO PHONE</span>
             </button>
           </div>
-        </section>
+        </div>
       )}
 
-      <footer style={{ textAlign: "center", padding: "24px", marginTop: "40px", borderTop: "2px dashed #555", width: "100%", maxWidth: "1000px" }}>
-        <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.3)", fontFamily: "'DotGothic16',sans-serif" }}>© 2024 Makefrom1 — 免許メーカー</p>
-      </footer>
+      {/* レスポンシブ対応 */}
+      <style>{`
+        @media (max-width: 700px) {
+          .license-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
