@@ -1079,7 +1079,7 @@ export default function LicenseMaker() {
             </div>
 
             <p style={{ textAlign: "center", color: "#d63384", fontSize: "13px", marginBottom: "16px", fontFamily: "'M PLUS Rounded 1c', sans-serif", fontWeight: 700 }}>
-              📄 A4用紙（210×297mm）に2枚並べた画像を生成します
+              📄 JP-ID03Nはがき用紙（100×148.5mm）に2枚並べた画像を生成します
             </p>
 
             <button

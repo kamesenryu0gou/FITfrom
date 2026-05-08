@@ -279,34 +279,38 @@ export async function renderLicenseCardToBlob(
 }
 
 /**
- * A4縦 (2480×3508px) に2枚のカードを上下に並べた印刷用シートを生成する。
- * カードは 1:1 スケールで描画し、余白を均等に配置する。
+ * JP-ID03N はがきサイズ (1181×1754px @ 300dpi) に2枚のカードを上下に並べた印刷用シートを生成する。
+ *
+ * 用紙仕様（JP-ID03N）:
+ *   シートサイズ: 100 × 148.5 mm @ 300dpi → 1181 × 1754 px
+ *   カードサイズ: 85.6 × 54 mm → 1011 × 638 px
+ *   左余白: 7.2mm → 85px
+ *   上余白: 13.5mm → 159px
+ *   カード間隔: 13.5mm → 159px
  */
 export async function renderLicenseSheetToBlob(
   data1: LicenseData,
   data2: LicenseData | null
 ): Promise<Blob> {
-  // A4縦 @ 300dpi
-  const SHEET_W = 2480;
-  const SHEET_H = 3508;
+  const DPI = 300;
+  const MM = DPI / 25.4; // 11.811 px/mm
 
-  // カードを3倍スケールで描画 → 3225×1950px
-  // A4に収まるよう縮小: 幅に合わせてスケール計算
-  const SCALE = 3;
-  const CARD_PX_W = CARD_W * SCALE; // 3225
-  const CARD_PX_H = CARD_H * SCALE; // 1950
+  // JP-ID03N はがきサイズ @ 300dpi
+  const SHEET_W = Math.round(100 * MM);    // 1181 px
+  const SHEET_H = Math.round(148.5 * MM);  // 1754 px
 
-  // A4幅に対してカードを収める際のスケール
-  const MARGIN = 100; // 左右マージン
-  const fitScale = (SHEET_W - MARGIN * 2) / CARD_PX_W;
-  const scaledW = Math.round(CARD_PX_W * fitScale);
-  const scaledH = Math.round(CARD_PX_H * fitScale);
+  // カードサイズ: 85.6mm × 54mm
+  const CARD_SHEET_W = Math.round(85.6 * MM); // 1011 px
+  const CARD_SHEET_H = Math.round(54 * MM);   //  638 px
 
-  // 2枚の合計高さ + マージン
-  const GAP = 60; // 2枚の間隔
-  const totalH = scaledH * 2 + GAP;
-  const startY = Math.round((SHEET_H - totalH) / 2);
-  const startX = Math.round((SHEET_W - scaledW) / 2);
+  // 余白（JP-ID03N仕様通り）
+  const MARGIN_LEFT = Math.round(7.2 * MM);   //  85 px
+  const MARGIN_TOP  = Math.round(13.5 * MM);  // 159 px
+  const CARD_GAP    = Math.round(13.5 * MM);  // 159 px
+
+  // カードテンプレート(CARD_W=1075, CARD_H=650)をシートカードサイズに入るスケール
+  // CARD_SHEET_W / CARD_W = 1011 / 1075 ≈ 0.940
+  const SCALE = CARD_SHEET_W / CARD_W;
 
   const sheet = document.createElement("canvas");
   sheet.width = SHEET_W;
@@ -320,13 +324,13 @@ export async function renderLicenseSheetToBlob(
   // 1枚目を描画
   const blob1 = await renderLicenseCardToBlob(data1, SCALE);
   const img1 = await loadImage(URL.createObjectURL(blob1));
-  sCtx.drawImage(img1, startX, startY, scaledW, scaledH);
+  sCtx.drawImage(img1, MARGIN_LEFT, MARGIN_TOP, CARD_SHEET_W, CARD_SHEET_H);
 
   // 2枚目を描画
   const data2Effective = data2 ?? data1;
   const blob2 = await renderLicenseCardToBlob(data2Effective, SCALE);
   const img2 = await loadImage(URL.createObjectURL(blob2));
-  sCtx.drawImage(img2, startX, startY + scaledH + GAP, scaledW, scaledH);
+  sCtx.drawImage(img2, MARGIN_LEFT, MARGIN_TOP + CARD_SHEET_H + CARD_GAP, CARD_SHEET_W, CARD_SHEET_H);
 
   return new Promise<Blob>((resolve, reject) => {
     sheet.toBlob(
@@ -340,7 +344,7 @@ export async function renderLicenseSheetToBlob(
 }
 
 /**
- * A4シートをデバイスに保存する。
+ * JP-ID03Nはがきサイズシートをデバイスに保存する。
  * iOS Safari: Web Share API → ネイティブ共有シート
  * その他: <a download> でダウンロード
  */
