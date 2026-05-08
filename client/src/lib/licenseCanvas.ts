@@ -4,28 +4,11 @@
  * 免許メーカーのカードをCanvas上に描画する。
  * FIT WARSの cardCanvas.ts と同じ方式を採用:
  *   - 台紙画像のピクセルサイズ (1075×650) をそのまま座標空間として使用
+ *   - プレビュー (LicenseMaker.tsx) とここで同じ定数を共有
  *   - ダウンロード時は ctx.scale(SCALE, SCALE) で高解像度化するだけ
  *
  * 座標は台紙画像 (license-card-base.png, 1075×650px) を
- * Pillow で精密に計測して確定した実測値。
- *
- * 実測結果:
- *   名前:     y=46-100   (h=54)
- *   長所:     y=105-135  (h=30)
- *   日付:     y=141-177  (h=36)
- *   約束:     y=228-510  (h=282)
- *   将来の夢: y=516-557  (h=41)
- *   発行:     y=563-602  (h=39)
- *   写真:     x=630-1030, y=46-602
- *   テキスト開始: x=160
- *
- * ユーザー指定mm調整:
- *   名前:     右に4mm(+50px) → x=210
- *   長所:     右に4mm(+50px) → x=210
- *   日付:     右に6mm(+75px) → x=235, 文字小さめ
- *   約束:     下に1mm(+12px) → y=240
- *   将来の夢: 右に2mm(+25px) → x=185
- *   免許メーカー: 右に2文字分(約30px) → x=190
+ * Pillow で精密に計測して確定した値。
  */
 
 export interface LicenseData {
@@ -38,46 +21,48 @@ export interface LicenseData {
   photoUrl: string | null;
 }
 
-// ── Layout constants (台紙 1075×650px 基準・Pillow実測値) ────────────────────
+// ── Layout constants (台紙 1075×650px 基準) ────────────────────────────────
+// プレビュー (LicenseMaker.tsx) と完全に同じ値を使うこと
 
 export const CARD_W = 1075;
 export const CARD_H = 650;
 
-// 写真エリア (実測値: x=630-1030, y=46-602)
-export const PHOTO_L = 630;   // 写真左端
-export const CARD_R  = 1030;  // 写真右端
-export const PHOTO_Y1 = 46;   // 写真上端
-export const PHOTO_Y2 = 602;  // 写真下端
+// ラベル右端 (「名前」「長所」「日付」「将来の夢」「発行」ラベルの右端)
+export const LABEL_R = 225;
 
-// 名前入力エリア (実測: y=46-100, ユーザー調整: x=210)
-export const NAME_X  = 210;
-export const NAME_Y1 = 46;
-export const NAME_Y2 = 100;
+// 写真エリア左端 (空・草の絵が始まる位置)
+export const PHOTO_L = 681;
 
-// 長所入力エリア (実測: y=105-135, ユーザー調整: x=210)
-export const KYOSHO_X  = 210;
-export const KYOSHO_Y1 = 105;
-export const KYOSHO_Y2 = 135;
+// カード右端
+export const CARD_R = 1033;
 
-// 日付入力エリア (実測: y=141-177, ユーザー調整: x=235, 文字小さめ)
-export const DATE_X  = 235;
+// 名前入力エリア (上の丸角ボックス内)
+export const NAME_Y1 = 8;
+export const NAME_Y2 = 41;
+
+// 長所入力エリア
+export const KYOSHO_Y1 = 106;
+export const KYOSHO_Y2 = 136;
+
+// 日付入力エリア
 export const DATE_Y1 = 141;
-export const DATE_Y2 = 177;
+export const DATE_Y2 = 178;
 
-// 約束テキストエリア (実測: y=228-510, ユーザー調整: 下に1mm → y=240, x=210)
-export const YAKUSOKU_X  = 210;
-export const YAKUSOKU_Y1 = 240;
-export const YAKUSOKU_Y2 = 510;
+// 約束テキストエリア (「優良」バッジ下〜将来の夢上)
+export const YAKUSOKU_Y1 = 270;
+export const YAKUSOKU_Y2 = 512;
 
-// 将来の夢入力エリア (実測: y=516-557, ユーザー調整: x=185)
-export const YUME_X  = 185;
-export const YUME_Y1 = 516;
-export const YUME_Y2 = 557;
+// 将来の夢入力エリア
+export const YUME_Y1 = 528;
+export const YUME_Y2 = 558;
 
-// 発行入力エリア (実測: y=563-602, ユーザー調整: 右に2文字 → x=190)
-export const HAKKO_X  = 190;
-export const HAKKO_Y1 = 563;
-export const HAKKO_Y2 = 602;
+// 発行入力エリア
+export const HAKKO_Y1 = 562;
+export const HAKKO_Y2 = 584;
+
+// 写真エリア (長所上端〜発行下端)
+export const PHOTO_Y1 = 106;
+export const PHOTO_Y2 = 590;
 
 // ── Assets ────────────────────────────────────────────────────────────────
 export const LICENSE_CARD_BASE_URL = "/manus-storage/license-card-base_65f89f3f.png";
@@ -96,6 +81,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 
 /**
  * 写真を指定エリアに object-cover + object-top で描画する。
+ * FIT WARSの cardCanvas.ts と同じロジック。
  */
 function drawPhotoCover(
   ctx: CanvasRenderingContext2D,
@@ -196,8 +182,8 @@ export async function renderLicenseCardToBlob(
   if (data.photoUrl) {
     try {
       const photoImg = await loadImage(data.photoUrl);
-      const pw = CARD_R - PHOTO_L;   // 400px
-      const ph = PHOTO_Y2 - PHOTO_Y1; // 556px
+      const pw = CARD_R - PHOTO_L;
+      const ph = PHOTO_Y2 - PHOTO_Y1;
       drawPhotoCover(ctx, photoImg, PHOTO_L, PHOTO_Y1, pw, ph);
     } catch {
       // 写真読み込み失敗は無視
@@ -208,39 +194,43 @@ export async function renderLicenseCardToBlob(
   ctx.fillStyle = "#222222";
   ctx.textBaseline = "middle";
 
-  // 名前 (y=46-100, x=210)
+  // 名前
   if (data.name) {
     const fontSize = data.name.length > 10 ? 18 : data.name.length > 6 ? 22 : 26;
     ctx.font = `bold ${fontSize}px 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', sans-serif`;
     ctx.textAlign = "left";
+    const nameX = LABEL_R + 10;
     const nameY = (NAME_Y1 + NAME_Y2) / 2;
-    ctx.fillText(data.name, NAME_X, nameY, PHOTO_L - NAME_X - 10);
+    ctx.fillText(data.name, nameX, nameY);
   }
 
-  // 長所 (y=105-135, x=210)
+  // 長所
   if (data.strength) {
     const fontSize = data.strength.length > 12 ? 14 : data.strength.length > 8 ? 16 : 18;
     ctx.font = `normal ${fontSize}px 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', sans-serif`;
     ctx.textAlign = "left";
+    const kyoshoX = LABEL_R + 10;
     const kyoshoY = (KYOSHO_Y1 + KYOSHO_Y2) / 2;
-    ctx.fillText(data.strength, KYOSHO_X, kyoshoY, PHOTO_L - KYOSHO_X - 10);
+    ctx.fillText(data.strength, kyoshoX, kyoshoY, PHOTO_L - LABEL_R - 20);
   }
 
-  // 日付 (y=141-177, x=235, 文字小さめ)
+  // 日付
   if (data.date) {
-    const fontSize = 14; // 小さめ
+    const fontSize = 16;
     ctx.font = `normal ${fontSize}px 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', sans-serif`;
     ctx.textAlign = "left";
+    const dateX = LABEL_R + 10;
     const dateY = (DATE_Y1 + DATE_Y2) / 2;
-    ctx.fillText(data.date, DATE_X, dateY, PHOTO_L - DATE_X - 10);
+    ctx.fillText(data.date, dateX, dateY, PHOTO_L - LABEL_R - 20);
   }
 
-  // 約束（複数行折り返し, y=240-510, x=210）
+  // 約束（複数行折り返し）
   if (data.promise) {
-    const areaW = PHOTO_L - YAKUSOKU_X - 10;
+    const areaW = PHOTO_L - 60;
     const areaH = YAKUSOKU_Y2 - YAKUSOKU_Y1;
+    // フォントサイズを文字数に応じて調整
     const charCount = data.promise.length;
-    const fontSize = charCount > 40 ? 16 : charCount > 20 ? 18 : 20;
+    const fontSize = charCount > 40 ? 18 : charCount > 20 ? 22 : 26;
     const lineHeight = fontSize * 1.6;
     const maxLines = Math.floor(areaH / lineHeight);
     ctx.font = `normal ${fontSize}px 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', sans-serif`;
@@ -248,7 +238,7 @@ export async function renderLicenseCardToBlob(
     drawWrappedText(
       ctx,
       data.promise,
-      YAKUSOKU_X,
+      60,
       YAKUSOKU_Y1 + fontSize * 0.8,
       areaW,
       lineHeight,
@@ -256,22 +246,24 @@ export async function renderLicenseCardToBlob(
     );
   }
 
-  // 将来の夢 (y=516-557, x=185)
+  // 将来の夢
   if (data.dream) {
     const fontSize = data.dream.length > 10 ? 14 : 16;
     ctx.font = `normal ${fontSize}px 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', sans-serif`;
     ctx.textAlign = "left";
+    const yumeX = LABEL_R + 10;
     const yumeY = (YUME_Y1 + YUME_Y2) / 2;
-    ctx.fillText(data.dream, YUME_X, yumeY, PHOTO_L - YUME_X - 10);
+    ctx.fillText(data.dream, yumeX, yumeY, PHOTO_L - LABEL_R - 20);
   }
 
-  // 発行 (y=563-602, x=190)
+  // 発行
   if (data.issuer) {
     const fontSize = 14;
     ctx.font = `normal ${fontSize}px 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', sans-serif`;
     ctx.textAlign = "left";
+    const hakkoX = LABEL_R + 10;
     const hakkoY = (HAKKO_Y1 + HAKKO_Y2) / 2;
-    ctx.fillText(data.issuer, HAKKO_X, hakkoY, PHOTO_L - HAKKO_X - 10);
+    ctx.fillText(data.issuer, hakkoX, hakkoY, PHOTO_L - LABEL_R - 20);
   }
 
   // ── Export ───────────────────────────────────────────────────────────────
@@ -288,6 +280,7 @@ export async function renderLicenseCardToBlob(
 
 /**
  * A4縦 (2480×3508px) に2枚のカードを上下に並べた印刷用シートを生成する。
+ * カードは 1:1 スケールで描画し、余白を均等に配置する。
  */
 export async function renderLicenseSheetToBlob(
   data1: LicenseData,
@@ -298,18 +291,19 @@ export async function renderLicenseSheetToBlob(
   const SHEET_H = 3508;
 
   // カードを3倍スケールで描画 → 3225×1950px
+  // A4に収まるよう縮小: 幅に合わせてスケール計算
   const SCALE = 3;
   const CARD_PX_W = CARD_W * SCALE; // 3225
   const CARD_PX_H = CARD_H * SCALE; // 1950
 
   // A4幅に対してカードを収める際のスケール
-  const MARGIN = 100;
+  const MARGIN = 100; // 左右マージン
   const fitScale = (SHEET_W - MARGIN * 2) / CARD_PX_W;
   const scaledW = Math.round(CARD_PX_W * fitScale);
   const scaledH = Math.round(CARD_PX_H * fitScale);
 
   // 2枚の合計高さ + マージン
-  const GAP = 60;
+  const GAP = 60; // 2枚の間隔
   const totalH = scaledH * 2 + GAP;
   const startY = Math.round((SHEET_H - totalH) / 2);
   const startX = Math.round((SHEET_W - scaledW) / 2);
