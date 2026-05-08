@@ -9,7 +9,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useLocation } from "wouter";
 
 const FITWARS_LOGO_URL = "/manus-storage/logo_685ee78c.png";
-const LICENSE_LOGO_URL = "/manus-storage/license-maker-logo-new_24534fed.png";
+const LICENSE_LOGO_URL = "/manus-storage/license-maker-logo-new2_eff90f28.png";
 const MAKEFROM1_LOGO_URL = "/manus-storage/makefrom1-logo-full_5458fab1.png";
 
 // ── Parallax scroll hook ───────────────────────────────────────────────────────
@@ -488,36 +488,38 @@ export default function PortalHome() {
         {/* Nav */}
         <nav style={{ display: "flex", gap: "6px", alignItems: "center" }}>
           {[
-            { label: "FIT WARS", path: "/fitwars", color: "#c8ff00" },
-            { label: "免許メーカー", path: "/license", color: "#ff8c42" },
+            { label: "FIT WARS", path: "/fitwars", color: "#c8ff00", bgColor: "rgba(200,255,0,0.1)", borderColor: "rgba(200,255,0,0.4)" },
+            { label: "免許メーカー", path: "/license", color: "#ff4daa", bgColor: "rgba(255,77,170,0.1)", borderColor: "rgba(255,77,170,0.4)" },
           ].map((item) => (
             <button
               key={item.path}
               onClick={() => handleNavigate(item.path)}
               style={{
-                padding: "8px 18px",
-                background: "transparent",
-                border: "1px solid rgba(255,255,255,0.12)",
-                borderRadius: "8px",
-                color: "rgba(255,255,255,0.65)",
+                padding: "8px 20px",
+                background: (item as any).bgColor || "transparent",
+                border: `1px solid ${(item as any).borderColor || "rgba(255,255,255,0.3)"}`,
+                borderRadius: "20px",
+                color: item.color,
                 fontSize: "13px",
-                fontWeight: 600,
+                fontWeight: 700,
                 cursor: "pointer",
-                transition: "all 0.25s",
-                letterSpacing: "0.04em",
+                transition: "all 0.25s cubic-bezier(0.34,1.56,0.64,1)",
+                letterSpacing: "0.06em",
                 fontFamily: "'Noto Sans JP', sans-serif",
+                textShadow: `0 0 10px ${item.color}80`,
+                boxShadow: `0 0 14px ${item.color}25, inset 0 1px 0 rgba(255,255,255,0.15)`,
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = item.color + "80";
-                e.currentTarget.style.color = item.color;
-                e.currentTarget.style.background = item.color + "12";
-                e.currentTarget.style.boxShadow = `0 0 16px ${item.color}30`;
+                e.currentTarget.style.background = item.color + "22";
+                e.currentTarget.style.borderColor = item.color + "cc";
+                e.currentTarget.style.boxShadow = `0 0 28px ${item.color}60, inset 0 1px 0 rgba(255,255,255,0.25)`;
+                e.currentTarget.style.transform = "translateY(-2px) scale(1.05)";
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)";
-                e.currentTarget.style.color = "rgba(255,255,255,0.65)";
-                e.currentTarget.style.background = "transparent";
-                e.currentTarget.style.boxShadow = "none";
+                e.currentTarget.style.background = (item as any).bgColor || "transparent";
+                e.currentTarget.style.borderColor = (item as any).borderColor || "rgba(255,255,255,0.3)";
+                e.currentTarget.style.boxShadow = `0 0 14px ${item.color}25, inset 0 1px 0 rgba(255,255,255,0.15)`;
+                e.currentTarget.style.transform = "none";
               }}
             >
               {item.label}
@@ -822,12 +824,12 @@ export default function PortalHome() {
             <FeatureCard
               title="免許メーカー"
               subtitle="Kids License Creator"
-              description="子供向けオリジナル免許証を作成。AIがWreck-It Ralph Sugar Rush風3Dキャラに変換。ニックネーム・長所・将来の夢を入力して特別な免許証をプレゼント！"
+              description="子供向けオリジナル免許証を作成。AIが写真をかわいいイラスト画像に変換。ニックネーム・長所・将来の夢を入力して特別な免許証をプレゼント！"
               logoUrl={LICENSE_LOGO_URL}
-              accentColor="#ff8c42"
-              glowColor="#ff8c42"
-              gradientFrom="rgba(20,10,4,0.97)"
-              gradientTo="rgba(30,14,6,0.95)"
+              accentColor="#ff4daa"
+              glowColor="#ff4daa"
+              gradientFrom="rgba(30,4,20,0.97)"
+              gradientTo="rgba(50,8,35,0.95)"
               onClick={() => handleNavigate("/license")}
               badge="NEW"
               delay={120}
