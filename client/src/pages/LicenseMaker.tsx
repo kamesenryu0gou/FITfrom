@@ -251,16 +251,17 @@ function LicenseCardPreview({ data }: { data: LicenseData }) {
         ) : null}
       </div>
 
-      {/* 名前: y=46〜100, x=165〜680
-          top=7.1%, h=8.3%, left=15.3%, w=47.9% */}
+      {/* 名前: y=46〜100, x=200〜680（中央やや左から左揃え）
+          top=7.1%, h=8.3%, left=18.6%(200/1075), w=44.7%(480/1075) */}
       <div style={{
         position: "absolute",
         top: "7.1%",
-        left: "15.3%",
-        width: "47.9%",
+        left: "18.6%",
+        width: "44.7%",
         height: "8.3%",
         display: "flex",
         alignItems: "center",
+        justifyContent: "flex-start",
         overflow: "hidden",
         padding: "0 4px",
       }}>
@@ -277,16 +278,17 @@ function LicenseCardPreview({ data }: { data: LicenseData }) {
         }}>{data.nickname}</span>
       </div>
 
-      {/* 長所: y=141〜183, x=165〜680
-          top=21.7%, h=6.5%, left=15.3%, w=47.9% */}
+      {/* 長所: y=141〜183, x=200〜680（ニックネームと同じ横座標）
+          top=21.7%, h=6.5%, left=18.6%(200/1075), w=44.7%(480/1075) */}
       <div style={{
         position: "absolute",
         top: "21.7%",
-        left: "15.3%",
-        width: "47.9%",
+        left: "18.6%",
+        width: "44.7%",
         height: "6.5%",
         display: "flex",
         alignItems: "center",
+        justifyContent: "flex-start",
         overflow: "hidden",
         padding: "0 4px",
       }}>
@@ -303,16 +305,17 @@ function LicenseCardPreview({ data }: { data: LicenseData }) {
         }}>{data.strength}</span>
       </div>
 
-      {/* 日付: y=183〜228, x=165〜680
-          top=28.2%, h=6.9%, left=15.3%, w=47.9% */}
+      {/* 日付: y=183〜228, x=200〜680（長所と同じ横座標）
+          top=28.2%, h=6.9%, left=18.6%(200/1075), w=44.7%(480/1075) */}
       <div style={{
         position: "absolute",
         top: "28.2%",
-        left: "15.3%",
-        width: "47.9%",
+        left: "18.6%",
+        width: "44.7%",
         height: "6.9%",
         display: "flex",
         alignItems: "center",
+        justifyContent: "flex-start",
         overflow: "hidden",
         padding: "0 4px",
       }}>
@@ -326,45 +329,46 @@ function LicenseCardPreview({ data }: { data: LicenseData }) {
         }}>{formatDate(data.date)}</span>
       </div>
 
-      {/* 約束: y=290〜516（帯の下端y=286から）, x=220〜680（優良ボックスの右から）
-          top=44.6%(290/650), h=34.8%(226/650), left=20.5%(220/1075), w=42.1%(452/1075)
-          「おとなになるまでまで有効」帯(y=228〜286)の下・優良ボックス(x=30〜200)の右 */}
+      {/* 約束: y=370〜516（優良ボックス下端y=366の下）, x=30〜680（左端から）
+          top=56.9%(370/650), h=22.5%(146/650), left=2.8%(30/1075), w=59.3%(638/1075)
+          「優良」ボックス(y=307〜366)の下・ニックネームと同じフォントサイズ・左揃え */}
       <div style={{
         position: "absolute",
-        top: "44.6%",
-        left: "20.5%",
-        width: "42.1%",
-        height: "34.8%",
+        top: "56.9%",
+        left: "2.8%",
+        width: "59.3%",
+        height: "22.5%",
         display: "flex",
         alignItems: "flex-start",
         justifyContent: "flex-start",
         overflow: "hidden",
-        padding: "2px 2px 2px 2px",
+        padding: "4px 4px 2px 8px",
       }}>
         <span style={{
-          fontSize: "clamp(6px, 1.5vw, 12px)",
-          fontWeight: 600,
+          fontSize: "clamp(10px, 2.8vw, 22px)",
+          fontWeight: 700,
           color: "#1a1a2e",
           fontFamily: "'M PLUS Rounded 1c','Noto Sans JP',sans-serif",
-          lineHeight: 1.6,
+          lineHeight: 1.4,
           wordBreak: "break-all",
           display: "-webkit-box",
-          WebkitLineClamp: 12,
+          WebkitLineClamp: 5,
           WebkitBoxOrient: "vertical",
           overflow: "hidden",
         } as React.CSSProperties}>{data.promise}</span>
       </div>
 
-      {/* 将来の夢: y=516〜558, x=165〜680
-          top=79.4%, h=6.5%, left=15.3%, w=47.9% */}
+      {/* 将来の夢: y=516〜558, x=195〜680（現在位置から右に2文字分≈30px）
+          top=79.4%, h=6.5%, left=18.1%(195/1075), w=45.1%(485/1075) */}
       <div style={{
         position: "absolute",
         top: "79.4%",
-        left: "15.3%",
-        width: "47.9%",
+        left: "18.1%",
+        width: "45.1%",
         height: "6.5%",
         display: "flex",
         alignItems: "center",
+        justifyContent: "flex-start",
         overflow: "hidden",
         padding: "0 4px",
       }}>
@@ -381,7 +385,33 @@ function LicenseCardPreview({ data }: { data: LicenseData }) {
         }}>{data.dream}</span>
       </div>
 
-      {/* 発行(免許メーカー): 非表示（プレビューから削除） */}
+      {/* 発行(免許メーカー): 将来の夢と同じ横軸(x=195)、発行行の縦軸(y=558〜603)
+          top=85.8%(558/650), h=6.9%(45/650), left=18.1%(195/1075), w=45.1%(485/1075)
+          将来の夢と同じフォントサイズ・固定テキスト「免許メーカー」 */}
+      <div style={{
+        position: "absolute",
+        top: "85.8%",
+        left: "18.1%",
+        width: "45.1%",
+        height: "6.9%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "flex-start",
+        overflow: "hidden",
+        padding: "0 4px",
+      }}>
+        <span style={{
+          fontSize: "clamp(8px, 1.9vw, 15px)",
+          fontWeight: 600,
+          color: "#1a1a2e",
+          fontFamily: "'M PLUS Rounded 1c','Noto Sans JP',sans-serif",
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          maxWidth: "100%",
+          lineHeight: 1,
+        }}>免許メーカー</span>
+      </div>
     </div>
   );
 }
@@ -391,27 +421,27 @@ const CARD_W  = 1075;
 const CARD_H  = 650;
 
 // 各フィールドの座標（実測値）
-const NAME_X    = 165;   // 名前入力開始 x
+const NAME_X    = 200;   // 名前入力開始 x（中央やや左から左揃え）
 const NAME_Y1   = 46;    // 名前行上端
 const NAME_Y2   = 100;   // 名前行下端
 
-const KYOSHO_X  = 165;   // 長所入力開始 x
+const KYOSHO_X  = 200;   // 長所入力開始 x（ニックネームと同じ横座標）
 const KYOSHO_Y1 = 141;   // 長所行上端
 const KYOSHO_Y2 = 183;   // 長所行下端
 
-const DATE_X    = 165;   // 日付入力開始 x
+const DATE_X    = 200;   // 日付入力開始 x（長所と同じ横座標）
 const DATE_Y1   = 183;   // 日付行上端
 const DATE_Y2   = 228;   // 日付行下端
 
-const YAKUSOKU_X  = 220; // 約束入力開始 x（優良ボックスの右: x=220）
-const YAKUSOKU_Y1 = 290; // 約束エリア上端（帯下端 y=286の下）
+const YAKUSOKU_X  = 30;  // 約束入力開始 x（左端から）
+const YAKUSOKU_Y1 = 370; // 約束エリア上端（優良ボックス下端 y=366の下）
 const YAKUSOKU_Y2 = 516; // 約束エリア下端
 
-const YUME_X    = 165;   // 将来の夢入力開始 x
+const YUME_X    = 195;   // 将来の夢入力開始 x（現在位置から右に2文字分≈30px）
 const YUME_Y1   = 516;   // 将来の夢行上端
 const YUME_Y2   = 558;   // 将来の夢行下端
 
-const HAKKO_X   = 165;   // 発行入力開始 x
+const HAKKO_X   = 195;   // 発行入力開始 x（将来の夢と同じ横軸）
 const HAKKO_Y1  = 558;   // 発行行上端
 const HAKKO_Y2  = 603;   // 発行行下端
 
@@ -521,8 +551,9 @@ async function renderLicenseCardOnCanvas(
     const areaW = TEXT_MAX_W - YAKUSOKU_X;
     const areaH = YAKUSOKU_Y2 - YAKUSOKU_Y1;
     const charCount = data.promise.length;
-    const fs = charCount > 40 ? 12 : charCount > 20 ? 15 : 18;
-    const lineH = fs * 1.6;
+    // ニックネームと同じ大型フォント
+    const fs = charCount > 20 ? 20 : charCount > 10 ? 24 : 26;
+    const lineH = fs * 1.4;
     const maxLines = Math.floor(areaH / lineH);
     ctx.font = `600 ${fs}px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
     let line = "";
@@ -551,7 +582,9 @@ async function renderLicenseCardOnCanvas(
   }
 
   // ── 発行(免許メーカー) ──
-  ctx.font = `600 13px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
+  // 将来の夢と同じフォントサイズで固定テキスト「免許メーカー」を印字
+  const dreamFs = (data.dream?.length ?? 0) > 10 ? 14 : 16;
+  ctx.font = `600 ${dreamFs}px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
   ctx.fillText("免許メーカー", HAKKO_X, (HAKKO_Y1 + HAKKO_Y2) / 2, TEXT_MAX_W - HAKKO_X);
 }
 
