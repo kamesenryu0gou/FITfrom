@@ -189,39 +189,45 @@ function CropModal({
 // 注意: 約束エリアはラベルなし（左端から始まる）、写真エリアは y=183 から始まる
 
 // ── TwoCardPreview: 2枚並べサムネイル（ResizeObserverで動的スケール）────────────
-function TwoCardPreview({ card1, card2 }: { card1: LicenseData; card2: LicenseData }) {
+// 個別カードのスケール縮小表示コンポーネント
+function ScaledCardThumb({ data, label, color }: { data: LicenseData; label: string; color: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(0.5);
-  const CARD_NATURAL_W = 520; // LicenseCardPreviewのmaxWidth
+  const [scale, setScale] = useState(1);
+  const CARD_NATURAL_W = 520;
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    const el = containerRef.current;
+    if (!el) return;
     const obs = new ResizeObserver((entries) => {
       const w = entries[0]?.contentRect.width ?? CARD_NATURAL_W;
       setScale(Math.min(1, w / CARD_NATURAL_W));
     });
-    obs.observe(containerRef.current);
+    obs.observe(el);
+    // 初回計算
+    const w = el.getBoundingClientRect().width || CARD_NATURAL_W;
+    setScale(Math.min(1, w / CARD_NATURAL_W));
     return () => obs.disconnect();
   }, []);
 
   const cardH = CARD_NATURAL_W * (650 / 1075) * scale;
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "20px" }}>
-      {([{ data: card1, label: "🎀 1まいめ", color: "#d63384" }, { data: card2, label: "⭐ 2まいめ", color: "#0088cc" }] as const).map((item, i) => (
-        <div key={i}>
-          <p style={{ textAlign: "center", color: item.color, fontSize: "14px", marginBottom: "8px", fontFamily: "'M PLUS Rounded 1c', sans-serif", fontWeight: 800 }}>{item.label}</p>
-          <div ref={i === 0 ? containerRef : undefined} style={{ overflow: "hidden", width: "100%", height: `${cardH}px` }}>
-            <div style={{
-              width: `${CARD_NATURAL_W}px`,
-              transformOrigin: "top left",
-              transform: `scale(${scale})`,
-            }}>
-              <LicenseCardPreview data={item.data} />
-            </div>
-          </div>
+    <div style={{ marginBottom: "16px" }}>
+      <p style={{ textAlign: "center", color, fontSize: "15px", marginBottom: "8px", fontFamily: "'M PLUS Rounded 1c', sans-serif", fontWeight: 800 }}>{label}</p>
+      <div ref={containerRef} style={{ overflow: "hidden", width: "100%", height: `${cardH}px` }}>
+        <div style={{ width: `${CARD_NATURAL_W}px`, transformOrigin: "top left", transform: `scale(${scale})` }}>
+          <LicenseCardPreview data={data} />
         </div>
-      ))}
+      </div>
+    </div>
+  );
+}
+
+function TwoCardPreview({ card1, card2 }: { card1: LicenseData; card2: LicenseData }) {
+  return (
+    <div style={{ marginBottom: "20px" }}>
+      <ScaledCardThumb data={card1} label="🎀 1まいめ" color="#d63384" />
+      <ScaledCardThumb data={card2} label="⭐ 2まいめ" color="#0088cc" />
     </div>
   );
 }
@@ -566,21 +572,21 @@ async function renderLicenseCardOnCanvas(
 
   // ── 名前 ──
   if (data.nickname) {
-    const fs = data.nickname.length > 10 ? 18 : data.nickname.length > 6 ? 22 : 26;
+    const fs = data.nickname.length > 10 ? 21 : data.nickname.length > 6 ? 25 : 29;
     ctx.font = `bold ${fs}px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
     ctx.fillText(data.nickname, NAME_X, (NAME_Y1 + NAME_Y2) / 2, TEXT_MAX_W - NAME_X);
   }
 
-  // ── 長所 (+2pxフォント) ──
+  // ── 長所 (+3pxフォント) ──
   if (data.strength) {
-    const fs = data.strength.length > 12 ? 16 : data.strength.length > 8 ? 18 : 20;
+    const fs = data.strength.length > 12 ? 19 : data.strength.length > 8 ? 21 : 23;
     ctx.font = `600 ${fs}px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
     ctx.fillText(data.strength, KYOSHO_X, (KYOSHO_Y1 + KYOSHO_Y2) / 2, TEXT_MAX_W - KYOSHO_X);
   }
 
-  // ── 日付 (+2pxフォント) ──
+  // ── 日付 (+3pxフォント) ──
   if (data.date) {
-    ctx.font = `600 15px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
+    ctx.font = `600 18px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
     ctx.fillText(formatDate(data.date), DATE_X, (DATE_Y1 + DATE_Y2) / 2, TEXT_MAX_W - DATE_X);
   }
 
@@ -591,7 +597,7 @@ async function renderLicenseCardOnCanvas(
     const areaH = YAKUSOKU_Y2 - YAKUSOKU_Y1;
     const charCount = data.promise.length;
     // ニックネームと同じ大型フォント
-    const fs = charCount > 20 ? 20 : charCount > 10 ? 24 : 26;
+    const fs = charCount > 20 ? 23 : charCount > 10 ? 27 : 29;
     const lineH = fs * 1.4;
     const maxLines = Math.floor(areaH / lineH);
     ctx.font = `600 ${fs}px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
@@ -613,17 +619,17 @@ async function renderLicenseCardOnCanvas(
     }
   }
 
-  // ── 将来の夢 (+2pxフォント・+20px右) ──
+  // ── 将来の夢 (+3pxフォント・+20px右) ──
   if (data.dream) {
     const yumeX = YUME_X + 20; // +20px右
-    const fs = data.dream.length > 10 ? 16 : 18;
+    const fs = data.dream.length > 10 ? 19 : 21;
     ctx.font = `600 ${fs}px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
     ctx.fillText(data.dream, yumeX, (YUME_Y1 + YUME_Y2) / 2, TEXT_MAX_W - yumeX);
   }
 
-  // ── 発行(免許メーカー) (+2pxフォント・+20px右) ──
+  // ── 発行(免許メーカー) (+3pxフォント・+20px右) ──
   const hakkoX = HAKKO_X + 20; // +20px右
-  const dreamFs = (data.dream?.length ?? 0) > 10 ? 16 : 18;
+  const dreamFs = (data.dream?.length ?? 0) > 10 ? 19 : 21;
   ctx.font = `600 ${dreamFs}px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
   ctx.fillText("免許メーカー", hakkoX, (HAKKO_Y1 + HAKKO_Y2) / 2, TEXT_MAX_W - hakkoX);
 }

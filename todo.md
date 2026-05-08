@@ -59,4 +59,6 @@
 - [x] 免許メーカー：downloadLicenseSheetをJP-ID03N仕様（はがき縦1181×1754px、カード1011×638px×2枚、余白7.2mm/13.5mm）に完全対応
 - [x] 免許メーカー：LicenseCardPreviewの座標を台紙実測値（名前y=47～100、長所y=141～177、日付y=184～222、写真x=647～1010）に修正
 - [x] FIT WARS：cardCanvas.tsのdownloadDualCardを縦向きカードを90°回転してJP-ID03N横向き配置に修正（縦横比保持）
-- [x] AI加工プロンプト（LICENSE_CARS_PROMPT）をシュガーラッシュ風アニメ調・人物特徴保持強化に更新
+- [x] AI加工プロンプト（LICENSE_CARS_PROMPT）をシュガーラッシュ風アニメ調・人物特徴保持強化に更新- [x] 免許メーカー：ダウンロードプレビューを2枚ともはみ出しなしに表示（TwoCardPreviewの修正）
+- [x] 免許メーカー：ダウンロードデータのフォントサイズを全て+3px
+- [x] FIT WARS：写真トリミング機能を実装（免許メーカーと同様のCropper）

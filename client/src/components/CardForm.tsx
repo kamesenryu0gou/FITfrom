@@ -10,10 +10,64 @@
  *           Draws card image + photo + text layers onto a canvas and exports as PNG.
  */
 
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useState } from "react";
 import { toast } from "sonner";
+import Cropper from "react-easy-crop";
 import type { CardData, ElementType } from "@/pages/Home";
 import { downloadCard } from "@/lib/cardCanvas";
+
+// ── Crop helpers ──────────────────────────────────────────────────────────────
+interface CropArea { x: number; y: number; width: number; height: number; }
+
+async function getCroppedImg(imageSrc: string, pixelCrop: CropArea): Promise<string> {
+  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = imageSrc;
+  });
+  const canvas = document.createElement("canvas");
+  canvas.width = pixelCrop.width;
+  canvas.height = pixelCrop.height;
+  const ctx = canvas.getContext("2d")!;
+  ctx.drawImage(image, pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height, 0, 0, pixelCrop.width, pixelCrop.height);
+  return canvas.toDataURL("image/jpeg", 0.95);
+}
+
+// ── Crop Modal ────────────────────────────────────────────────────────────────
+function CropModal({ imageSrc, onDone, onCancel }: { imageSrc: string; onDone: (url: string) => void; onCancel: () => void; }) {
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<CropArea | null>(null);
+  const onCropComplete = useCallback((_: unknown, pixels: CropArea) => { setCroppedAreaPixels(pixels); }, []);
+  const handleDone = async () => {
+    if (!croppedAreaPixels) return;
+    const url = await getCroppedImg(imageSrc, croppedAreaPixels);
+    onDone(url);
+  };
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", zIndex: 9999, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ background: "#0a0a1a", borderRadius: "20px", overflow: "hidden", width: "min(92vw, 500px)", boxShadow: "0 30px 80px rgba(0,0,0,0.8)", border: "3px solid #6a20cc" }}>
+        <div style={{ padding: "16px 20px", borderBottom: "1px solid #2a2a3a", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span style={{ fontWeight: 700, fontSize: "15px", color: "#fff", fontFamily: "'Noto Sans JP', sans-serif" }}>✂️ 写真を切り取る（3:4）</span>
+          <button onClick={onCancel} style={{ background: "rgba(106,32,204,0.3)", border: "2px solid #6a20cc", cursor: "pointer", fontSize: "16px", color: "#fff", width: "32px", height: "32px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+        </div>
+        <div style={{ position: "relative", width: "100%", height: "320px", background: "#000" }}>
+          <Cropper image={imageSrc} crop={crop} zoom={zoom} aspect={3 / 4} onCropChange={setCrop} onZoomChange={setZoom} onCropComplete={onCropComplete} />
+        </div>
+        <div style={{ padding: "16px 20px" }}>
+          <label style={{ fontSize: "12px", color: "rgba(255,255,255,0.6)", display: "block", marginBottom: "8px" }}>ズーム</label>
+          <input type="range" min={1} max={3} step={0.05} value={zoom} onChange={(e) => setZoom(Number(e.target.value))} style={{ width: "100%", accentColor: "#6a20cc" }} />
+        </div>
+        <div style={{ padding: "0 20px 20px", display: "flex", gap: "12px" }}>
+          <button onClick={onCancel} style={{ flex: 1, padding: "13px", border: "1px solid #2a2a3a", borderRadius: "10px", background: "rgba(255,255,255,0.05)", color: "#fff", fontWeight: 600, fontSize: "14px", cursor: "pointer", fontFamily: "'Noto Sans JP', sans-serif" }}>キャンセル</button>
+          <button onClick={handleDone} style={{ flex: 2, padding: "13px", border: "none", borderRadius: "10px", background: "linear-gradient(135deg, #6a20cc, #9b44ee)", color: "#fff", fontWeight: 700, fontSize: "14px", cursor: "pointer", boxShadow: "0 4px 12px rgba(106,32,204,0.5)", fontFamily: "'Noto Sans JP', sans-serif" }}>この範囲で決定</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const ABILITIES = [
   { value: "BOOST", label: "BOOST：同属性+20" },
@@ -130,23 +184,37 @@ export default function CardForm({
   hideDownload = false,
 }: CardFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [cropModalSrc, setCropModalSrc] = useState<string | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
 
   const handlePhotoUpload = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
-
       if (!file.type.startsWith("image/")) {
         toast.error("画像ファイルを選択してください");
         return;
       }
-
       const url = URL.createObjectURL(file);
-      updateCardData({ photoUrl: url, photoFile: file });
-      toast.success("写真をアップロードしました！");
+      setPendingFile(file);
+      setCropModalSrc(url);
+      // reset input so same file can be re-selected
+      e.target.value = "";
     },
-    [updateCardData]
+    []
   );
+
+  const handleCropDone = useCallback((croppedUrl: string) => {
+    updateCardData({ photoUrl: croppedUrl, photoFile: pendingFile });
+    setCropModalSrc(null);
+    setPendingFile(null);
+    toast.success("写真をトリミングしました！");
+  }, [updateCardData, pendingFile]);
+
+  const handleCropCancel = useCallback(() => {
+    setCropModalSrc(null);
+    setPendingFile(null);
+  }, []);
 
   const generateRarity = useCallback(() => {
     const rarities = ["★", "★★", "★★★"];
@@ -177,6 +245,10 @@ export default function CardForm({
   const selectedElement = ELEMENT_OPTIONS.find((e) => e.value === cardData.element)!;
 
   return (
+    <>
+      {cropModalSrc && (
+        <CropModal imageSrc={cropModalSrc} onDone={handleCropDone} onCancel={handleCropCancel} />
+      )}
     <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
       {/* Section: 基本情報 */}
       <div style={SECTION_STYLE}>
@@ -565,5 +637,6 @@ export default function CardForm({
         }
       `}</style>
     </div>
+    </>
   );
 }
