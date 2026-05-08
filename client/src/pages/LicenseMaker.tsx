@@ -251,13 +251,13 @@ function LicenseCardPreview({ data }: { data: LicenseData }) {
         ) : null}
       </div>
 
-      {/* 名前: y=46〜100, x=328〜680（313+15px）
-          top=7.1%, h=8.3%, left=30.5%(328/1075), w=32.7%(352/1075) */}
+      {/* 名前: y=46〜100, x=343〜680（328+15px）
+          top=7.1%, h=8.3%, left=31.9%(343/1075), w=31.3%(337/1075) */}
       <div style={{
         position: "absolute",
         top: "7.1%",
-        left: "30.5%",
-        width: "32.7%",
+        left: "31.9%",
+        width: "31.3%",
         height: "8.3%",
         display: "flex",
         alignItems: "center",
@@ -278,13 +278,13 @@ function LicenseCardPreview({ data }: { data: LicenseData }) {
         }}>{data.nickname}</span>
       </div>
 
-      {/* 長所: y=141〜183, x=328〜680（313+15px）
-          top=21.7%, h=6.5%, left=30.5%(328/1075), w=32.7%(352/1075) */}
+      {/* 長所: y=141〜183, x=343〜680（328+15px）
+          top=21.7%, h=6.5%, left=31.9%(343/1075), w=31.3%(337/1075) */}
       <div style={{
         position: "absolute",
         top: "21.7%",
-        left: "30.5%",
-        width: "32.7%",
+        left: "31.9%",
+        width: "31.3%",
         height: "6.5%",
         display: "flex",
         alignItems: "center",
@@ -305,13 +305,13 @@ function LicenseCardPreview({ data }: { data: LicenseData }) {
         }}>{data.strength}</span>
       </div>
 
-      {/* 日付: y=183〜228, x=328〜680（313+15px）
-          top=28.2%, h=6.9%, left=30.5%(328/1075), w=32.7%(352/1075) */}
+      {/* 日付: y=183〜228, x=343〜680（328+15px）
+          top=28.2%, h=6.9%, left=31.9%(343/1075), w=31.3%(337/1075) */}
       <div style={{
         position: "absolute",
         top: "28.2%",
-        left: "30.5%",
-        width: "32.7%",
+        left: "31.9%",
+        width: "31.3%",
         height: "6.9%",
         display: "flex",
         alignItems: "center",
@@ -421,15 +421,15 @@ const CARD_W  = 1075;
 const CARD_H  = 650;
 
 // 各フィールドの座標（実測値）
-const NAME_X    = 328;   // 名前入力開始 x（313+15px）
+const NAME_X    = 343;   // 名前入力開始 x（328+15px）
 const NAME_Y1   = 46;    // 名前行上端
 const NAME_Y2   = 100;   // 名前行下端
 
-const KYOSHO_X  = 328;   // 長所入力開始 x（313+15px）
+const KYOSHO_X  = 343;   // 長所入力開始 x（328+15px）
 const KYOSHO_Y1 = 141;   // 長所行上端
 const KYOSHO_Y2 = 183;   // 長所行下端
 
-const DATE_X    = 328;   // 日付入力開始 x（313+15px）
+const DATE_X    = 343;   // 日付入力開始 x（328+15px）
 const DATE_Y1   = 183;   // 日付行上端
 const DATE_Y2   = 228;   // 日付行下端
 
