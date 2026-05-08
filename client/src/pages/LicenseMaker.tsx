@@ -203,14 +203,15 @@ function LicenseCardPreview({ data }: { data: LicenseData }) {
 
 // ── Download (Canvas) ──────────────────────────────────────────────────────────
 const DPI = 300;
-const MM = DPI / 25.4;
-const SHEET_W = Math.round(100 * MM);
-const SHEET_H = Math.round(148 * MM);
-const CARD_W  = Math.round(85.6 * MM);
-const CARD_H  = Math.round(54 * MM);
-const MARGIN_L = Math.round(7.2 * MM);
-const MARGIN_T = Math.round(18 * MM);
-const GAP      = Math.round(4.5 * MM);
+const MM = DPI / 25.4;  // 11.811 px/mm
+// A4縦（210mm×297mm）に2枚縦に並べる仕様
+const SHEET_W = Math.round(210 * MM);   // 2480px
+const SHEET_H = Math.round(297 * MM);   // 3508px
+const CARD_W  = Math.round(85.6 * MM);  // 1011px
+const CARD_H  = Math.round(54 * MM);    // 638px
+const MARGIN_L = Math.round((210 - 85.6) / 2 * MM);  // 735px（中央揃え）
+const MARGIN_T = Math.round(30 * MM);   // 354px（上余白30mm）
+const GAP      = Math.round(15 * MM);   // 177px（カード間隔15mm）
 
 function loadImg(src: string): Promise<HTMLImageElement> {
   return new Promise((res, rej) => {
@@ -247,7 +248,6 @@ async function renderLicenseCardOnCanvas(
   const H = CARD_H;
   ctx.drawImage(baseImg, ox, oy, W, H);
 
-  const fontSize = (mm: number) => Math.round(mm * MM / 10);
   ctx.textBaseline = "middle";
   ctx.fillStyle = "#1a1a2e";
 
@@ -258,33 +258,33 @@ async function renderLicenseCardOnCanvas(
     return `${parts[0]}年${parseInt(parts[1])}月${parseInt(parts[2])}日`;
   };
 
-  // 名前
-  ctx.font = `bold ${fontSize(3.2)}px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
+  // 名前 — CARD_H=638px基準でフォントサイズを直接指定
+  ctx.font = `bold 27px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
   ctx.textAlign = "left";
-  ctx.fillText(data.nickname || "", ox + W * 0.172, oy + H * 0.116);
+  ctx.fillText(data.nickname || "", ox + W * 0.186, oy + H * 0.116);
 
   // 長所
-  ctx.font = `600 ${fontSize(2.7)}px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
-  ctx.fillText(data.strength || "", ox + W * 0.172, oy + H * 0.183);
+  ctx.font = `600 24px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
+  ctx.fillText(data.strength || "", ox + W * 0.186, oy + H * 0.224);
 
   // 日付
-  ctx.font = `600 ${fontSize(2.5)}px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
-  ctx.fillText(formatDate(data.date), ox + W * 0.172, oy + H * 0.248);
+  ctx.font = `600 24px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
+  ctx.fillText(formatDate(data.date), ox + W * 0.186, oy + H * 0.285);
 
   // 約束（複数行）
-  ctx.font = `600 ${fontSize(2.3)}px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
+  ctx.font = `600 24px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
   const promiseText = data.promise || "";
-  const maxW = W * 0.55;
-  const lineH = fontSize(2.3) * 1.6;
+  const maxW = W * 0.59;
+  const lineH = 38;
   let line = "";
-  let lineY = oy + H * 0.42;
+  let lineY = oy + H * 0.525;
   for (const char of promiseText) {
     const testLine = line + char;
     if (ctx.measureText(testLine).width > maxW && line !== "") {
       ctx.fillText(line, ox + W * 0.023, lineY);
       line = char;
       lineY += lineH;
-      if (lineY > oy + H * 0.575) break;
+      if (lineY > oy + H * 0.75) break;
     } else {
       line = testLine;
     }
@@ -292,15 +292,15 @@ async function renderLicenseCardOnCanvas(
   if (line) ctx.fillText(line, ox + W * 0.023, lineY);
 
   // 将来の夢
-  ctx.font = `600 ${fontSize(2.5)}px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
-  ctx.fillText(data.dream || "", ox + W * 0.172, oy + H * 0.783);
+  ctx.font = `600 24px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
+  ctx.fillText(data.dream || "", ox + W * 0.186, oy + H * 0.800);
 
   // 発行
-  ctx.font = `600 ${fontSize(2.3)}px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
-  ctx.fillText("免許メーカー", ox + W * 0.172, oy + H * 0.845);
+  ctx.font = `600 22px 'M PLUS Rounded 1c','Noto Sans JP',sans-serif`;
+  ctx.fillText("免許メーカー", ox + W * 0.186, oy + H * 0.846);
 
   // 写真
-  const photoX = ox + W * 0.627;
+  const photoX = ox + W * 0.595;
   const photoY = oy + H * 0.080;
   const photoW = W * 0.341;
   const photoH = H * 0.852;
@@ -657,7 +657,7 @@ export default function LicenseMaker() {
           </div>
           <div style={{ textAlign: "center", marginTop: "28px" }}>
             <p style={{ fontFamily: "'DotGothic16',sans-serif", fontSize: "0.85rem", color: "rgba(255,255,255,0.5)", marginBottom: "16px" }}>
-              用紙サイズ（100×148mm）に合わせた2面付き画像を生成します
+              A4用紙（210×297mm）に2枚並べた画像を生成します
             </p>
             <button
               onClick={handleDownload}
