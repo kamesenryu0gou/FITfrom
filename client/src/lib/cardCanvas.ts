@@ -313,26 +313,24 @@ export async function downloadCard(cardData: CardData): Promise<void> {
 
 // ── Dual-card sheet download ──────────────────────────────────────────────
 //
-// 用紙仕様（はがきサイズ 2面付き）:
-//   シートサイズ: 100 × 148.5 mm
-//   カードサイズ: 85.6 × 54 mm（横向き・ランドスケープ、用紙に2枚縦に並べる）
-//   カードテンプレートは縦向きなので、配置時に90°回転する
+// 用紙仕様（JP-ID03N はがきサイズ 2面付き）:
+//   シートサイズ: 100 × 148.5 mm @ 300dpi → 1181 × 1754 px
+//   カードサイズ: 85.6 × 54 mm（横向き・ランドスケープ）→ 1011 × 638 px
+//   カードテンプレートは縦向き（300×475）なので、90°回転してから配置する
 //
 // 配置計算（横向きカードを用紙に2枚縦に並べる）:
 //   カード幅 = 85.6mm → 1011px
 //   カード高 = 54mm  →  638px
 //   左余白 = (100 - 85.6) / 2 = 7.2mm → 85px
-//   上余白 = (148.5 - 54×2) / 2 = 20.25mm → 239px
-//   カード間隔 = 0mm（隔隔なし）
-//   カード1 top = 239px
-//   カード2 top = 239 + 638 = 877px
+//   上余白 = (148.5 - 54×2) / 3 = 13.5mm → 159px
+//   カード間隔 = 13.5mm → 159px
+//   カード1 top = 159px
+//   カード2 top = 159 + 638 + 159 = 956px
 //
-// 出力解像度: 300 dpi
-//   1 mm = 300/25.4 ≈ 11.811 px
-//
-// シート全体 (px @ 300dpi):
-//   W = 100 × 11.811 ≈ 1181 px
-//   H = 148.5 × 11.811 ≈ 1754 px
+// 90°回転の方法:
+//   縦向きカード(CARD_W=300, CARD_H=475)を時計回り90°回転
+//   → 回転後: 幅=475相当, 高さ=300相当
+//   スケール = 1011/475 ≈ 2.128（縦横ほぼ同率で縦横比が保たれる）
 
 const DPI = 300;
 const MM_TO_PX = DPI / 25.4;
@@ -342,24 +340,21 @@ const SHEET_W_PX = Math.round(100 * MM_TO_PX);    // 1181 px
 const SHEET_H_PX = Math.round(148.5 * MM_TO_PX);  // 1754 px
 
 // カードは横向き（landscape）で配置: 85.6mm幅 × 54mm高さ
-// カードテンプレートは縦向き（portrait）なのでそのまま配置
 const CARD_SHEET_W = Math.round(85.6 * MM_TO_PX); // 1011 px（カードの幅）
 const CARD_SHEET_H = Math.round(54 * MM_TO_PX);   //  638 px（カードの高さ）
 
 // 左余白: (100 - 85.6) / 2 = 7.2mm（左右均等）
 const MARGIN_LEFT = Math.round(7.2 * MM_TO_PX);   //  85 px
-// 上余白: (148.5 - 54×2) / 3 = 13.5mm（上下余白・カード間隔を3等分）
+// 上余白: (148.5 - 54×2) / 3 = 13.5mm
 const MARGIN_TOP  = Math.round(13.5 * MM_TO_PX);  // 159 px
 // カード間隔: 13.5mm（上余白と同じ）
 const CARD_GAP    = Math.round(13.5 * MM_TO_PX);  // 159 px
 
 /**
  * Renders a single card at the exact pixel dimensions needed for the sheet.
- * Uses the same layout ratios as renderCardToBlob but at CARD_SHEET_W × CARD_SHEET_H.
- *
- * カードテンプレート画像は縦向き（portrait: CARD_W=300, CARD_H=475）。
- * シート上も縦向き（portrait）のまま配置する。
- * カードサイズ: 85.6mm幅 × 54mm高さ（CARD_SHEET_W × CARD_SHEET_H）
+ * カードテンプレートは縦向き（CARD_W=300, CARD_H=475）。
+ * JP-ID03Nカードは横向き（85.6×54mm）なので、90°時計回りに回転して配置する。
+ * 回転後スケール = CARD_SHEET_W / CARD_H ≈ 2.128（縦横比が保たれる）
  */
 async function renderCardForSheet(
   cardData: CardData,
@@ -367,19 +362,20 @@ async function renderCardForSheet(
   offsetX: number,
   offsetY: number
 ): Promise<void> {
-  // 縦向き（portrait）のままシートに描画
-  // CARD_SHEET_W=1011px（カードの幅）, CARD_SHEET_H=638px（カードの高さ）
-  const PORTRAIT_W = CARD_SHEET_W; // 1011 px
-  const PORTRAIT_H = CARD_SHEET_H; //  638 px
+  // 縦向きカード(CARD_W=300, CARD_H=475)を90°回転してから描画
+  // 回転後: 幅=CARD_SHEET_W=1011px, 高さ=CARD_SHEET_H=638px
+  // スケール = CARD_SHEET_W / CARD_H = 1011/475 ≈ 2.128
+  const SCALE = CARD_SHEET_W / CARD_H; // 2.128
 
+  // まず縦向きカードを通常サイズで描画する一時キャンバス
   const tmpCanvas = document.createElement("canvas");
-  tmpCanvas.width = PORTRAIT_W;
-  tmpCanvas.height = PORTRAIT_H;
+  tmpCanvas.width = CARD_W;   // 300
+  tmpCanvas.height = CARD_H;  // 475
   const tmpCtx = tmpCanvas.getContext("2d")!;
 
-  // Scale factor relative to the preview coordinate space (CARD_W=300, CARD_H=475)
-  const scaleX = PORTRAIT_W / CARD_W;
-  const scaleY = PORTRAIT_H / CARD_H;
+  // スケールなし（1:1）で描画
+  const scaleX = 1;
+  const scaleY = 1;
   tmpCtx.scale(scaleX, scaleY);
 
   const colors = ELEMENT_COLORS[cardData.element];
@@ -483,8 +479,13 @@ async function renderCardForSheet(
     drawOutlinedText(tmpCtx, cardData.description, BAR_LEFT + 8, lowerMid, "#ffffff", 2);
   }
 
-  // 縦向きのままシートに貼り付ける（回転なし）
-  ctx.drawImage(tmpCanvas, offsetX, offsetY, PORTRAIT_W, PORTRAIT_H);
+  // 縦向きカードを90°時計回りに回転してシートに貼り付ける
+  // 回転後: 幅=CARD_SHEET_W(1011px), 高さ=CARD_SHEET_H(638px)
+  ctx.save();
+  ctx.translate(offsetX + CARD_SHEET_W, offsetY);
+  ctx.rotate(Math.PI / 2); // 90°時計回り
+  ctx.drawImage(tmpCanvas, 0, 0, CARD_W * SCALE, CARD_H * SCALE);
+  ctx.restore();
 }
 
 /**

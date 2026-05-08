@@ -354,8 +354,33 @@ async function generateAnimeCharacter(options: {
   throw new Error("No image data returned from gpt-image-1");
 }
 
-// ── License Maker: Cars-style 3D character conversion ─────────────────────────
-const LICENSE_CARS_PROMPT = `Transform the person in this photo into a 3D animated character from the Disney movie "Wreck-It Ralph" (Sugar Rush style) while strictly maintaining the facial features and likeness of the original photo. The AI must preserve the person's unique facial structure, eyes, and expression to ensure they remain recognizable. Replace the clothing with a stylized racing suit with a candy theme: glossy texture, donut-shaped shoulder pads, and icing stripes. Style: High-quality 3D Pixar-style rendering with vibrant pastel colors. Background: A candy-themed race track.`;
+// ── License Maker: Sugar Rush anime-style character conversion ────────────────────────────────────
+const LICENSE_CARS_PROMPT = `Transform the person in this photo into a vibrant 3D animated character inspired by the Disney movie "Wreck-It Ralph" (Sugar Rush world), rendered in a high-quality Pixar/Disney 3D animation style.
+
+FACIAL PRESERVATION (CRITICAL):
+- Strictly preserve the person's unique facial structure, bone structure, eye shape, nose shape, and mouth shape so they remain immediately recognizable
+- Maintain their exact age appearance — do NOT make them younger, smoother, or more idealized
+- Keep their specific eye characteristics (shape, color, expression)
+- Preserve their hair color, style, and texture as closely as possible
+- Maintain their facial expression from the original photo
+
+CHARACTER STYLE:
+- Convert to high-quality Pixar/Disney 3D animation style — NOT flat 2D anime, NOT sketch, NOT watercolor
+- Slightly exaggerated proportions typical of Sugar Rush characters: large expressive eyes, smooth skin with subtle stylization
+- Rich, vibrant candy-themed color palette: glossy surfaces, saturated pastels, warm candy tones
+- Clothing: replace with a stylized candy-themed outfit (racing suit with candy stripes, icing details, donut-shaped accessories)
+- Keep the same pose and body orientation as the original photo
+
+BACKGROUND:
+- Candy-themed Sugar Rush race track environment
+- Colorful candy architecture, lollipop trees, chocolate rivers
+- Bright, cheerful lighting with soft rim light on the character
+
+IMPORTANT RESTRICTIONS:
+- Do NOT include any text, letters, numbers, watermarks, captions, or UI elements in the image
+- Do NOT change the person's gender
+- Do NOT make the person look significantly younger or older
+- Output: pure character illustration only, no text overlay whatsoever`;
 
 async function generateLicenseCharacter(options: {
   photoBase64: string;
