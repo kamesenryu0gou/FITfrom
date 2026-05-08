@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import Cropper from "react-easy-crop";
 import { trpc } from "@/lib/trpc";
 
-const LICENSE_LOGO_URL = "/manus-storage/license-maker-logo_d91648c0.png";
+const LICENSE_LOGO_URL = "/manus-storage/license-maker-logo-new_24534fed.png";
 const LICENSE_CARD_BASE_URL = "/manus-storage/license-card-base_65f89f3f.png";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -166,12 +166,12 @@ function LicenseCardPreview({ data }: { data: LicenseData }) {
         style={{ width: "100%", display: "block", borderRadius: "12px" }}
       />
 
-      {/* 名前フィールド */}
+      {/* 名前フィールド — left=29.8%, top=3.1% (台紙1075×650px基準) */}
       <div style={{
         position: "absolute",
-        top: "7%",
-        left: "32%",
-        right: "4%",
+        top: "3%",
+        left: "30%",
+        right: "2%",
         height: "9%",
         display: "flex",
         alignItems: "center",
@@ -185,13 +185,13 @@ function LicenseCardPreview({ data }: { data: LicenseData }) {
         }}>{data.nickname || ""}</span>
       </div>
 
-      {/* 長所フィールド */}
+      {/* 長所フィールド — left=29.8%, top=14.6% */}
       <div style={{
         position: "absolute",
-        top: "22%",
-        left: "32%",
-        right: "42%",
-        height: "7%",
+        top: "14.5%",
+        left: "30%",
+        right: "38%",
+        height: "6%",
         display: "flex",
         alignItems: "center",
         padding: "0 8px",
@@ -204,13 +204,13 @@ function LicenseCardPreview({ data }: { data: LicenseData }) {
         }}>{data.strength || ""}</span>
       </div>
 
-      {/* 日付フィールド */}
+      {/* 日付フィールド — left=29.8%, top=20.5% */}
       <div style={{
         position: "absolute",
-        top: "30%",
-        left: "32%",
-        right: "42%",
-        height: "7%",
+        top: "20.5%",
+        left: "30%",
+        right: "38%",
+        height: "6%",
         display: "flex",
         alignItems: "center",
         padding: "0 8px",
@@ -223,16 +223,17 @@ function LicenseCardPreview({ data }: { data: LicenseData }) {
         }}>{data.date || ""}</span>
       </div>
 
-      {/* 約束フィールド（優良の下のエリア） */}
+      {/* 約束フィールド — left=1.9%, top=44.6%（優良バッジの下の大きなエリア） */}
       <div style={{
         position: "absolute",
-        top: "50%",
-        left: "4%",
-        right: "44%",
-        height: "18%",
+        top: "44%",
+        left: "2%",
+        right: "38%",
+        height: "25%",
         display: "flex",
         alignItems: "flex-start",
-        padding: "8px",
+        padding: "6px 8px",
+        overflow: "hidden",
       }}>
         <span style={{
           fontSize: "clamp(9px, 1.8vw, 13px)",
@@ -244,13 +245,13 @@ function LicenseCardPreview({ data }: { data: LicenseData }) {
         }}>{data.promise || ""}</span>
       </div>
 
-      {/* 将来の夢フィールド */}
+      {/* 将来の夢フィールド — left=14.9%, top=77.7% */}
       <div style={{
         position: "absolute",
-        bottom: "11%",
-        left: "22%",
-        right: "44%",
-        height: "7%",
+        top: "77.5%",
+        left: "15%",
+        right: "38%",
+        height: "6.5%",
         display: "flex",
         alignItems: "center",
         padding: "0 8px",
@@ -263,13 +264,13 @@ function LicenseCardPreview({ data }: { data: LicenseData }) {
         }}>{data.dream || ""}</span>
       </div>
 
-      {/* 発行フィールド */}
+      {/* 発行フィールド — left=14.9%, top=83.5% */}
       <div style={{
         position: "absolute",
-        bottom: "4%",
-        left: "22%",
-        right: "44%",
-        height: "7%",
+        top: "83.5%",
+        left: "15%",
+        right: "38%",
+        height: "6.5%",
         display: "flex",
         alignItems: "center",
         padding: "0 8px",
@@ -282,13 +283,13 @@ function LicenseCardPreview({ data }: { data: LicenseData }) {
         }}>免許メーカー</span>
       </div>
 
-      {/* 写真エリア（右側の山・空の箇所） */}
+      {/* 写真エリア — left=63.3%, top=14.6%, width=34.9%, height=74.6% */}
       <div style={{
         position: "absolute",
-        top: "22%",
-        right: "3%",
-        width: "38%",
-        height: "62%",
+        top: "14.5%",
+        left: "63%",
+        right: "2%",
+        bottom: "8%",
         overflow: "hidden",
         borderRadius: "4px",
       }}>
@@ -366,52 +367,52 @@ async function renderLicenseCardOnCanvas(
   ctx.textBaseline = "middle";
   ctx.fillStyle = "#1a1a2e";
 
-  // 名前
+  // 名前 — left=30%, top=3%+height/2=7.5%
   ctx.font = `bold ${fontSize(3.5)}px 'Noto Sans JP', sans-serif`;
   ctx.textAlign = "left";
-  ctx.fillText(data.nickname || "", ox + W * 0.32, oy + H * 0.115);
+  ctx.fillText(data.nickname || "", ox + W * 0.30, oy + H * 0.075);
 
-  // 長所
+  // 長所 — left=30%, top=14.5%+height/2=17.5%
   ctx.font = `600 ${fontSize(2.8)}px 'Noto Sans JP', sans-serif`;
-  ctx.fillText(data.strength || "", ox + W * 0.32, oy + H * 0.255);
+  ctx.fillText(data.strength || "", ox + W * 0.30, oy + H * 0.175);
 
-  // 日付
+  // 日付 — left=30%, top=20.5%+height/2=23.5%
   ctx.font = `600 ${fontSize(2.5)}px 'Noto Sans JP', sans-serif`;
-  ctx.fillText(data.date || "", ox + W * 0.32, oy + H * 0.335);
+  ctx.fillText(data.date || "", ox + W * 0.30, oy + H * 0.235);
 
-  // 約束（複数行対応）
+  // 約束（複数行対応）— left=2%, top=44%
   ctx.font = `600 ${fontSize(2.5)}px 'Noto Sans JP', sans-serif`;
   const promiseText = data.promise || "";
-  const maxW = W * 0.52;
+  const maxW = W * 0.58;
   const lineH = fontSize(2.5) * 1.5;
   let line = "";
-  let lineY = oy + H * 0.52;
+  let lineY = oy + H * 0.47;
   for (const char of promiseText) {
     const testLine = line + char;
     if (ctx.measureText(testLine).width > maxW && line !== "") {
-      ctx.fillText(line, ox + W * 0.04, lineY);
+      ctx.fillText(line, ox + W * 0.02, lineY);
       line = char;
       lineY += lineH;
-      if (lineY > oy + H * 0.68) break;
+      if (lineY > oy + H * 0.69) break;
     } else {
       line = testLine;
     }
   }
-  if (line) ctx.fillText(line, ox + W * 0.04, lineY);
+  if (line) ctx.fillText(line, ox + W * 0.02, lineY);
 
-  // 将来の夢
+  // 将来の夢 — left=15%, top=77.5%+height/2=80.75%
   ctx.font = `600 ${fontSize(2.5)}px 'Noto Sans JP', sans-serif`;
-  ctx.fillText(data.dream || "", ox + W * 0.22, oy + H * 0.875);
+  ctx.fillText(data.dream || "", ox + W * 0.15, oy + H * 0.8075);
 
-  // 発行
+  // 発行 — left=15%, top=83.5%+height/2=86.75%
   ctx.font = `600 ${fontSize(2.3)}px 'Noto Sans JP', sans-serif`;
-  ctx.fillText("免許メーカー", ox + W * 0.22, oy + H * 0.945);
+  ctx.fillText("免許メーカー", ox + W * 0.15, oy + H * 0.8675);
 
-  // 写真エリア（右側）
-  const photoX = ox + W * 0.585;
-  const photoY = oy + H * 0.22;
-  const photoW = W * 0.38;
-  const photoH = H * 0.62;
+  // 写真エリア — left=63%, top=14.5%, right=2%, bottom=8%
+  const photoX = ox + W * 0.63;
+  const photoY = oy + H * 0.145;
+  const photoW = W * 0.35;
+  const photoH = H * 0.765;
 
   const displayPhoto = data.aiPhotoUrl || data.photoUrl;
   if (displayPhoto) {
