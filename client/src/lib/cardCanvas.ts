@@ -337,27 +337,29 @@ export async function downloadCard(cardData: CardData): Promise<void> {
 const DPI = 300;
 const MM_TO_PX = DPI / 25.4;
 
-const SHEET_W_PX = Math.round(100 * MM_TO_PX);    // 1181
-const SHEET_H_PX = Math.round(148.5 * MM_TO_PX);  // 1754
+// 用紙: 100mm × 148mm @ 300dpi（縦向きハガキサイズ）
+const SHEET_W_PX = Math.round(100 * MM_TO_PX);    // 1181 px
+const SHEET_H_PX = Math.round(148 * MM_TO_PX);    // 1748 px
 
-// カードは横向き（landscape）で配置: 85.6mm幅 × 54mm高さ
-// カードテンプレートは縦向きなので、renderCardForSheet内で回転する
-const CARD_SHEET_W = Math.round(85.6 * MM_TO_PX); // 1011 px（横向きカードの幅）
-const CARD_SHEET_H = Math.round(54 * MM_TO_PX);   //  638 px（横向きカードの高さ）
+// カードは縦向き（portrait）で配置: 85.6mm幅 × 54mm高さ
+// カードテンプレートは縦向き（portrait）なのでそのまま配置
+const CARD_SHEET_W = Math.round(85.6 * MM_TO_PX); // 1011 px（カードの幅）
+const CARD_SHEET_H = Math.round(54 * MM_TO_PX);   //  638 px（カードの高さ）
 
-// 左余白: (100 - 85.6) / 2 = 7.2mm → 中央揃え
-const MARGIN_LEFT = Math.round((100 - 85.6) / 2 * MM_TO_PX); // 85 px
-// 上余白: (148.5 - 54×2) / 2 = 20.25mm
-const MARGIN_TOP  = Math.round((148.5 - 54 * 2) / 2 * MM_TO_PX); // 239 px
-const CARD_GAP    = 0; // カード間隔なし（隔隔なしで用紙に収まる）
+// 左余白: 7.2mm
+const MARGIN_LEFT = Math.round(7.2 * MM_TO_PX);   //  85 px
+// 上余白: 18mm
+const MARGIN_TOP  = Math.round(18 * MM_TO_PX);    // 213 px
+// カード間隔: 4.5mm
+const CARD_GAP    = Math.round(4.5 * MM_TO_PX);   //  53 px
 
 /**
  * Renders a single card at the exact pixel dimensions needed for the sheet.
  * Uses the same layout ratios as renderCardToBlob but at CARD_SHEET_W × CARD_SHEET_H.
  *
  * カードテンプレート画像は縦向き（portrait: CARD_W=300, CARD_H=475）。
- * シート上は横向き（landscape）で配置するため、一時キャンバスに縦向きで描画してから
- * 90°回転してシートに貼り付ける。
+ * シート上も縦向き（portrait）のまま配置する。
+ * カードサイズ: 85.6mm幅 × 54mm高さ（CARD_SHEET_W × CARD_SHEET_H）
  */
 async function renderCardForSheet(
   cardData: CardData,
@@ -365,11 +367,10 @@ async function renderCardForSheet(
   offsetX: number,
   offsetY: number
 ): Promise<void> {
-  // 一時キャンバスは縦向き（portrait）で描画
-  // CARD_SHEET_W=1011px（横向き時の幅）, CARD_SHEET_H=638px（横向き時の高さ）
-  // 縦向きキャンバスは幅と高さを入れ替える
-  const PORTRAIT_W = CARD_SHEET_H; // 638 px（縦向きカードの幅）
-  const PORTRAIT_H = CARD_SHEET_W; // 1011 px（縦向きカードの高さ）
+  // 縦向き（portrait）のままシートに描画
+  // CARD_SHEET_W=1011px（カードの幅）, CARD_SHEET_H=638px（カードの高さ）
+  const PORTRAIT_W = CARD_SHEET_W; // 1011 px
+  const PORTRAIT_H = CARD_SHEET_H; //  638 px
 
   const tmpCanvas = document.createElement("canvas");
   tmpCanvas.width = PORTRAIT_W;
@@ -482,13 +483,8 @@ async function renderCardForSheet(
     drawOutlinedText(tmpCtx, cardData.description, BAR_LEFT + 8, lowerMid, "#ffffff", 2);
   }
 
-  // 縦向きキャンバスを横向きに90°回転してシートに貼り付ける
-  // 回転後: 幅=CARD_SHEET_W(1011px), 高さ=CARD_SHEET_H(638px)
-  ctx.save();
-  ctx.translate(offsetX + CARD_SHEET_W / 2, offsetY + CARD_SHEET_H / 2);
-  ctx.rotate(Math.PI / 2); // 90° CW
-  ctx.drawImage(tmpCanvas, -PORTRAIT_W / 2, -PORTRAIT_H / 2, PORTRAIT_W, PORTRAIT_H);
-  ctx.restore();
+  // 縦向きのままシートに貼り付ける（回転なし）
+  ctx.drawImage(tmpCanvas, offsetX, offsetY, PORTRAIT_W, PORTRAIT_H);
 }
 
 /**
