@@ -251,13 +251,13 @@ function LicenseCardPreview({ data }: { data: LicenseData }) {
         ) : null}
       </div>
 
-      {/* 名前: y=46〜100, x=313〜680（273+40px）
-          top=7.1%, h=8.3%, left=29.1%(313/1075), w=34.1%(367/1075) */}
+      {/* 名前: y=46〜100, x=328〜680（313+15px）
+          top=7.1%, h=8.3%, left=30.5%(328/1075), w=32.7%(352/1075) */}
       <div style={{
         position: "absolute",
         top: "7.1%",
-        left: "29.1%",
-        width: "34.1%",
+        left: "30.5%",
+        width: "32.7%",
         height: "8.3%",
         display: "flex",
         alignItems: "center",
@@ -278,13 +278,13 @@ function LicenseCardPreview({ data }: { data: LicenseData }) {
         }}>{data.nickname}</span>
       </div>
 
-      {/* 長所: y=141〜183, x=313〜680（273+40px）
-          top=21.7%, h=6.5%, left=29.1%(313/1075), w=34.1%(367/1075) */}
+      {/* 長所: y=141〜183, x=328〜680（313+15px）
+          top=21.7%, h=6.5%, left=30.5%(328/1075), w=32.7%(352/1075) */}
       <div style={{
         position: "absolute",
         top: "21.7%",
-        left: "29.1%",
-        width: "34.1%",
+        left: "30.5%",
+        width: "32.7%",
         height: "6.5%",
         display: "flex",
         alignItems: "center",
@@ -305,13 +305,13 @@ function LicenseCardPreview({ data }: { data: LicenseData }) {
         }}>{data.strength}</span>
       </div>
 
-      {/* 日付: y=183〜228, x=313〜680（273+40px）
-          top=28.2%, h=6.9%, left=29.1%(313/1075), w=34.1%(367/1075) */}
+      {/* 日付: y=183〜228, x=328〜680（313+15px）
+          top=28.2%, h=6.9%, left=30.5%(328/1075), w=32.7%(352/1075) */}
       <div style={{
         position: "absolute",
         top: "28.2%",
-        left: "29.1%",
-        width: "34.1%",
+        left: "30.5%",
+        width: "32.7%",
         height: "6.9%",
         display: "flex",
         alignItems: "center",
@@ -421,15 +421,15 @@ const CARD_W  = 1075;
 const CARD_H  = 650;
 
 // 各フィールドの座標（実測値）
-const NAME_X    = 313;   // 名前入力開始 x（273+40px）
+const NAME_X    = 328;   // 名前入力開始 x（313+15px）
 const NAME_Y1   = 46;    // 名前行上端
 const NAME_Y2   = 100;   // 名前行下端
 
-const KYOSHO_X  = 313;   // 長所入力開始 x（273+40px）
+const KYOSHO_X  = 328;   // 長所入力開始 x（313+15px）
 const KYOSHO_Y1 = 141;   // 長所行上端
 const KYOSHO_Y2 = 183;   // 長所行下端
 
-const DATE_X    = 313;   // 日付入力開始 x（273+40px）
+const DATE_X    = 328;   // 日付入力開始 x（313+15px）
 const DATE_Y1   = 183;   // 日付行上端
 const DATE_Y2   = 228;   // 日付行下端
 
@@ -680,13 +680,15 @@ function LicenseForm({
   const inputStyle: React.CSSProperties = {
     width: "100%",
     padding: "12px 16px",
-    borderRadius: "16px",
-    border: "3px solid transparent",
+    borderRadius: "20px",
+    border: "3px solid rgba(255,105,180,0.35)",
     fontSize: "16px",
     fontFamily: "'M PLUS Rounded 1c', 'Noto Sans JP', sans-serif",
+    fontWeight: 700,
     outline: "none",
     transition: "all 0.2s",
     boxSizing: "border-box",
+    boxShadow: "0 3px 0 rgba(255,105,180,0.2)",
   };
 
   return (
@@ -701,7 +703,7 @@ function LicenseForm({
 
       {/* ニックネーム */}
       <div>
-        <label style={{ display: "block", marginBottom: "6px", fontWeight: 700, fontSize: "13px", color: "#fff", fontFamily: "'DotGothic16', sans-serif", letterSpacing: "1px" }}>ニックネーム</label>
+        <label style={{ display: "block", marginBottom: "6px", fontWeight: 900, fontSize: "14px", color: "#d63384", fontFamily: "'M PLUS Rounded 1c', sans-serif", letterSpacing: "1px", textShadow: "1px 1px 0 #fff" }}>🎀 ニックネーム</label>
         <input
           type="text"
           placeholder="(例) サンプルたろう"
@@ -713,7 +715,7 @@ function LicenseForm({
 
       {/* 長所 */}
       <div>
-        <label style={{ display: "block", marginBottom: "6px", fontWeight: 700, fontSize: "13px", color: "#fff", fontFamily: "'DotGothic16', sans-serif", letterSpacing: "1px" }}>長所</label>
+        <label style={{ display: "block", marginBottom: "6px", fontWeight: 900, fontSize: "14px", color: "#e67e00", fontFamily: "'M PLUS Rounded 1c', sans-serif", letterSpacing: "1px", textShadow: "1px 1px 0 #fff" }}>⭐ 長所</label>
         <input
           type="text"
           placeholder="(例) たくさんたべる"
@@ -725,7 +727,7 @@ function LicenseForm({
 
       {/* 日付 */}
       <div>
-        <label style={{ display: "block", marginBottom: "6px", fontWeight: 700, fontSize: "13px", color: "#fff", fontFamily: "'DotGothic16', sans-serif", letterSpacing: "1px" }}>日付</label>
+        <label style={{ display: "block", marginBottom: "6px", fontWeight: 900, fontSize: "14px", color: "#0088cc", fontFamily: "'M PLUS Rounded 1c', sans-serif", letterSpacing: "1px", textShadow: "1px 1px 0 #fff" }}>📅 日付</label>
         <input
           type="date"
           value={data.date}
@@ -736,7 +738,7 @@ function LicenseForm({
 
       {/* 約束 */}
       <div>
-        <label style={{ display: "block", marginBottom: "6px", fontWeight: 700, fontSize: "13px", color: "#fff", fontFamily: "'DotGothic16', sans-serif", letterSpacing: "1px" }}>約束</label>
+        <label style={{ display: "block", marginBottom: "6px", fontWeight: 900, fontSize: "14px", color: "#2e7d32", fontFamily: "'M PLUS Rounded 1c', sans-serif", letterSpacing: "1px", textShadow: "1px 1px 0 #fff" }}>🌟 約束</label>
         <input
           type="text"
           placeholder="(例) ゲームは1日1時間"
@@ -748,7 +750,7 @@ function LicenseForm({
 
       {/* 将来の夢 */}
       <div>
-        <label style={{ display: "block", marginBottom: "6px", fontWeight: 700, fontSize: "13px", color: "#fff", fontFamily: "'DotGothic16', sans-serif", letterSpacing: "1px" }}>将来の夢</label>
+        <label style={{ display: "block", marginBottom: "6px", fontWeight: 900, fontSize: "14px", color: "#7b1fa2", fontFamily: "'M PLUS Rounded 1c', sans-serif", letterSpacing: "1px", textShadow: "1px 1px 0 #fff" }}>💫 将来の夢</label>
         <input
           type="text"
           placeholder="(例) けいさつかん"
@@ -760,7 +762,7 @@ function LicenseForm({
 
       {/* 写真 */}
       <div>
-        <label style={{ display: "block", marginBottom: "6px", fontWeight: 700, fontSize: "13px", color: "#fff", fontFamily: "'DotGothic16', sans-serif", letterSpacing: "1px" }}>写真</label>
+        <label style={{ display: "block", marginBottom: "6px", fontWeight: 900, fontSize: "14px", color: "#c62828", fontFamily: "'M PLUS Rounded 1c', sans-serif", letterSpacing: "1px", textShadow: "1px 1px 0 #fff" }}>📸 写真</label>
         <input
           ref={fileInputRef}
           type="file"
@@ -773,14 +775,14 @@ function LicenseForm({
             onClick={() => fileInputRef.current?.click()}
             style={{
               flex: 1, minWidth: "120px", padding: "12px 16px",
-              background: "linear-gradient(135deg, #ff66b2, #cc0066)",
-              border: "none", borderRadius: "16px", color: "#fff",
-              fontWeight: 700, fontSize: "14px", cursor: "pointer",
-              fontFamily: "'DotGothic16', sans-serif",
-              boxShadow: "0 4px 0 #880044",
+              background: "linear-gradient(135deg, #ff69b4, #d63384)",
+              border: "none", borderRadius: "50px", color: "#fff",
+              fontWeight: 900, fontSize: "14px", cursor: "pointer",
+              fontFamily: "'M PLUS Rounded 1c', sans-serif",
+              boxShadow: "0 4px 0 #a0005a",
             }}
           >
-            {data.photoUrl ? "写真を変更" : "写真を選択"}
+            {data.photoUrl ? "📸 写真を変更" : "📸 写真を選択"}
           </button>
           {data.photoUrl && (
             <button
@@ -789,12 +791,12 @@ function LicenseForm({
               style={{
                 flex: 1, minWidth: "120px", padding: "12px 16px",
                 background: isGeneratingAI
-                  ? "rgba(255,255,255,0.2)"
-                  : "linear-gradient(135deg, #00d4ff, #0088cc)",
-                border: "none", borderRadius: "16px", color: "#fff",
-                fontWeight: 700, fontSize: "13px", cursor: isGeneratingAI ? "not-allowed" : "pointer",
-                fontFamily: "'DotGothic16', sans-serif",
-                boxShadow: isGeneratingAI ? "none" : "0 4px 0 #005588",
+                  ? "#ccc"
+                  : "linear-gradient(135deg, #00c6ff, #0072ff)",
+                border: "none", borderRadius: "50px", color: "#fff",
+                fontWeight: 900, fontSize: "13px", cursor: isGeneratingAI ? "not-allowed" : "pointer",
+                fontFamily: "'M PLUS Rounded 1c', sans-serif",
+                boxShadow: isGeneratingAI ? "none" : "0 4px 0 #004bb5",
               }}
             >
               {isGeneratingAI ? "生成中..." : "AIイラスト化"}
@@ -808,7 +810,7 @@ function LicenseForm({
               alt="preview"
               style={{ width: "60px", height: "80px", objectFit: "cover", borderRadius: "8px", border: "2px solid rgba(255,255,255,0.3)" }}
             />
-            <span style={{ fontSize: "12px", color: "rgba(255,255,255,0.7)", fontFamily: "'DotGothic16', sans-serif" }}>
+            <span style={{ fontSize: "12px", color: "#d63384", fontFamily: "'M PLUS Rounded 1c', sans-serif", fontWeight: 700 }}>
               {data.aiPhotoUrl ? "AIイラスト使用中" : "写真選択済み"}
             </span>
           </div>
@@ -853,32 +855,111 @@ export default function LicenseMaker() {
     }
   };
 
+  // ── Sugar Rush POP スタイル定数 ──
+  const panelStyle: React.CSSProperties = {
+    background: "rgba(255,255,255,0.88)",
+    borderRadius: "28px",
+    border: "4px solid #fff",
+    padding: "24px",
+    boxShadow: "0 8px 32px rgba(255,120,200,0.2), 0 2px 0 #fff inset",
+  };
+  const headingStyle: React.CSSProperties = {
+    fontFamily: "'M PLUS Rounded 1c', 'Noto Sans JP', sans-serif",
+    fontWeight: 900,
+    fontSize: "20px",
+    color: "#d63384",
+    textShadow: "2px 2px 0 #fff, 3px 3px 0 #ff9de2",
+    margin: "0 0 2px",
+    letterSpacing: "1px",
+  };
+  const subHeadingStyle: React.CSSProperties = {
+    fontFamily: "'M PLUS Rounded 1c', sans-serif",
+    fontWeight: 700,
+    fontSize: "11px",
+    color: "#ff69b4",
+    letterSpacing: "3px",
+    margin: 0,
+  };
+  const dividerStyle: React.CSSProperties = {
+    height: "3px",
+    background: "linear-gradient(90deg, #ff9de2, #ffd6a5, #fffb96, #a0f4a0, #96d9ff)",
+    borderRadius: "4px",
+    margin: "12px 0 16px",
+  };
+
   return (
     <div style={{
       minHeight: "100vh",
-      background: "linear-gradient(135deg, #1a0533 0%, #0d1b4a 50%, #0a2a1a 100%)",
+      background: "linear-gradient(160deg, #ff9de2 0%, #ffd6a5 25%, #fffb96 50%, #a0f4a0 75%, #96d9ff 100%)",
       fontFamily: "'M PLUS Rounded 1c', 'Noto Sans JP', sans-serif",
+      position: "relative",
+      overflow: "hidden",
     }}>
+      {/* 背景デコレーション */}
+      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, overflow: "hidden" }}>
+        {["⭐","🍬","🌟","💖","🍭","✨","🎀","🌈","🍡","💫"].map((emoji, i) => (
+          <span key={i} style={{
+            position: "absolute",
+            fontSize: `${18 + (i % 3) * 10}px`,
+            opacity: 0.15,
+            top: `${(i * 11 + 5) % 90}%`,
+            left: `${(i * 13 + 3) % 95}%`,
+            transform: `rotate(${i * 37}deg)`,
+            userSelect: "none",
+          }}>{emoji}</span>
+        ))}
+      </div>
+
       {/* ヘッダー */}
-      <div style={{ padding: "16px 20px", display: "flex", alignItems: "center", gap: "12px" }}>
+      <div style={{ padding: "16px 20px", display: "flex", alignItems: "center", gap: "12px", position: "relative", zIndex: 1 }}>
         <button
           onClick={() => setLocation("/")}
           style={{
-            background: "rgba(255,255,255,0.1)", border: "2px solid rgba(255,255,255,0.3)",
-            borderRadius: "12px", color: "#fff", padding: "8px 16px",
-            fontSize: "14px", cursor: "pointer", fontFamily: "'DotGothic16', sans-serif",
+            background: "#fff",
+            border: "3px solid #ff69b4",
+            borderRadius: "50px",
+            color: "#d63384",
+            padding: "8px 20px",
+            fontSize: "14px",
+            cursor: "pointer",
+            fontFamily: "'M PLUS Rounded 1c', sans-serif",
+            fontWeight: 800,
+            boxShadow: "0 4px 0 #ff9de2",
           }}
-        >← ホームに戻る</button>
+        >← ホームへもどる</button>
       </div>
 
       {/* ロゴ */}
-      <div style={{ textAlign: "center", padding: "0 20px 20px" }}>
-        <img src={LICENSE_LOGO_URL} alt="免許メーカー" style={{ maxWidth: "200px", height: "auto" }} />
-        <p style={{ color: "rgba(255,255,255,0.9)", fontSize: "16px", margin: "8px 0 0", fontFamily: "'DotGothic16', sans-serif" }}>
-          君だけのオリジナルの免許を作ろう！
+      <div style={{ textAlign: "center", padding: "0 20px 24px", position: "relative", zIndex: 1 }}>
+        <div style={{
+          display: "inline-block",
+          background: "#fff",
+          borderRadius: "24px",
+          padding: "12px 24px",
+          boxShadow: "0 6px 0 #ff9de2, 0 0 0 4px #ffd6a5",
+          marginBottom: "12px",
+        }}>
+          <img src={LICENSE_LOGO_URL} alt="免許メーカー" style={{ maxWidth: "180px", height: "auto", display: "block" }} />
+        </div>
+        <p style={{
+          color: "#d63384",
+          fontSize: "18px",
+          margin: "0 0 4px",
+          fontFamily: "'M PLUS Rounded 1c', sans-serif",
+          fontWeight: 900,
+          textShadow: "2px 2px 0 #fff",
+        }}>
+          🎉 きみだけのオリジナル免許をつくろう！
         </p>
-        <p style={{ color: "#00d4ff", fontSize: "12px", margin: "4px 0 0", fontFamily: "'DotGothic16', sans-serif", letterSpacing: "2px" }}>
-          MAKE YOUR OWN ORIGINAL LICENCE!
+        <p style={{
+          color: "#c2185b",
+          fontSize: "12px",
+          margin: 0,
+          fontFamily: "'M PLUS Rounded 1c', sans-serif",
+          fontWeight: 700,
+          letterSpacing: "3px",
+        }}>
+          ✨ MAKE YOUR OWN ORIGINAL LICENCE! ✨
         </p>
       </div>
 
@@ -886,43 +967,43 @@ export default function LicenseMaker() {
       <div style={{
         maxWidth: "1100px", margin: "0 auto", padding: "0 16px 40px",
         display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px",
+        position: "relative", zIndex: 1,
       }}
         className="license-grid"
       >
         {/* 左: 入力フォーム */}
-        <div style={{
-          background: "rgba(255,255,255,0.05)", borderRadius: "20px",
-          border: "2px solid rgba(255,255,255,0.15)", padding: "24px",
-          backdropFilter: "blur(10px)",
-        }}>
+        <div style={panelStyle}>
           {/* カード切り替えタブ */}
-          <div style={{ display: "flex", gap: "8px", marginBottom: "20px" }}>
+          <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
             {([1, 2] as const).map((num) => (
               <button
                 key={num}
                 onClick={() => setActiveCard(num)}
                 style={{
-                  flex: 1, padding: "10px",
+                  flex: 1, padding: "12px",
                   background: activeCard === num
-                    ? "linear-gradient(135deg, #ff66b2, #cc0066)"
-                    : "rgba(255,255,255,0.1)",
-                  border: activeCard === num ? "2px solid #ff66b2" : "2px dashed rgba(255,255,255,0.3)",
-                  borderRadius: "12px", color: "#fff",
-                  fontWeight: 700, fontSize: "14px", cursor: "pointer",
-                  fontFamily: "'DotGothic16', sans-serif",
-                  boxShadow: activeCard === num ? "0 4px 0 #880044" : "none",
+                    ? "linear-gradient(135deg, #ff69b4, #d63384)"
+                    : "#f8f0ff",
+                  border: activeCard === num ? "3px solid #d63384" : "3px dashed #ffb3d9",
+                  borderRadius: "18px",
+                  color: activeCard === num ? "#fff" : "#d63384",
+                  fontWeight: 900,
+                  fontSize: "15px",
+                  cursor: "pointer",
+                  fontFamily: "'M PLUS Rounded 1c', sans-serif",
+                  boxShadow: activeCard === num ? "0 5px 0 #a0005a" : "0 3px 0 #ffb3d9",
                 }}
               >
-                {num === 1 ? "🚗 1枚目" : "🏎️ 2枚目"}
+                {num === 1 ? "🎀 1まいめ" : "⭐ 2まいめ"}
               </button>
             ))}
           </div>
 
           <div style={{ marginBottom: "8px" }}>
-            <h2 style={{ color: "#fff", fontSize: "18px", margin: "0 0 4px", fontFamily: "'DotGothic16', sans-serif" }}>入力フォーム</h2>
-            <p style={{ color: "#00d4ff", fontSize: "11px", margin: 0, fontFamily: "'DotGothic16', sans-serif", letterSpacing: "2px" }}>INPUT FORM</p>
+            <h2 style={headingStyle}>📝 にゅうりょくフォーム</h2>
+            <p style={subHeadingStyle}>INPUT FORM</p>
           </div>
-          <div style={{ height: "1px", background: "rgba(255,255,255,0.2)", margin: "12px 0 16px" }} />
+          <div style={dividerStyle} />
 
           <LicenseForm
             data={activeData}
@@ -934,37 +1015,33 @@ export default function LicenseMaker() {
             onClick={handleCreate}
             style={{
               width: "100%", marginTop: "20px", padding: "16px",
-              background: "linear-gradient(135deg, #00d4ff, #0088cc)",
-              border: "none", borderRadius: "16px", color: "#fff",
-              fontWeight: 700, fontSize: "16px", cursor: "pointer",
-              fontFamily: "'DotGothic16', sans-serif",
-              boxShadow: "0 6px 0 #005588",
-              letterSpacing: "1px",
+              background: "linear-gradient(135deg, #ff69b4, #d63384)",
+              border: "none", borderRadius: "50px", color: "#fff",
+              fontWeight: 900, fontSize: "18px", cursor: "pointer",
+              fontFamily: "'M PLUS Rounded 1c', sans-serif",
+              boxShadow: "0 6px 0 #a0005a",
+              letterSpacing: "2px",
             }}
           >
-            作成 CREATE
+            🌟 つくる！ CREATE
           </button>
         </div>
 
         {/* 右: プレビュー */}
-        <div style={{
-          background: "rgba(255,255,255,0.05)", borderRadius: "20px",
-          border: "2px solid rgba(255,255,255,0.15)", padding: "24px",
-          backdropFilter: "blur(10px)",
-        }}>
+        <div style={panelStyle}>
           <div style={{ marginBottom: "8px" }}>
-            <h2 style={{ color: "#fff", fontSize: "18px", margin: "0 0 4px", fontFamily: "'DotGothic16', sans-serif" }}>
-              {activeCard === 1 ? "🚗 1枚目プレビュー" : "🏎️ 2枚目プレビュー"}
+            <h2 style={headingStyle}>
+              {activeCard === 1 ? "🎀 1まいめプレビュー" : "⭐ 2まいめプレビュー"}
             </h2>
-            <p style={{ color: "#00d4ff", fontSize: "11px", margin: 0, fontFamily: "'DotGothic16', sans-serif", letterSpacing: "2px" }}>PREVIEW</p>
+            <p style={subHeadingStyle}>PREVIEW</p>
           </div>
-          <div style={{ height: "1px", background: "rgba(255,255,255,0.2)", margin: "12px 0 16px" }} />
+          <div style={dividerStyle} />
 
           <LicenseCardPreview data={activeData} />
 
           {!showPreview && (
-            <p style={{ textAlign: "center", color: "rgba(255,255,255,0.5)", fontSize: "13px", marginTop: "16px", fontFamily: "'DotGothic16', sans-serif" }}>
-              特別な自分の免許<br />作っちゃおう♪
+            <p style={{ textAlign: "center", color: "#d63384", fontSize: "14px", marginTop: "16px", fontFamily: "'M PLUS Rounded 1c', sans-serif", fontWeight: 700 }}>
+              ✨ とくべつな自分の免許<br />つくっちゃおう♪
             </p>
           )}
         </div>
@@ -974,34 +1051,35 @@ export default function LicenseMaker() {
       {showPreview && (
         <div style={{
           maxWidth: "1100px", margin: "0 auto 40px", padding: "0 16px",
+          position: "relative", zIndex: 1,
         }}>
           <div style={{
-            background: "rgba(255,255,255,0.05)", borderRadius: "20px",
-            border: "2px solid rgba(0,212,255,0.4)", padding: "24px",
-            backdropFilter: "blur(10px)",
+            ...panelStyle,
+            border: "4px solid #ff69b4",
+            boxShadow: "0 8px 32px rgba(255,105,180,0.3), 0 2px 0 #fff inset",
           }}>
             <div style={{ textAlign: "center", marginBottom: "20px" }}>
-              <h2 style={{ color: "#fff", fontSize: "20px", margin: "0 0 4px", fontFamily: "'DotGothic16', sans-serif" }}>
-                🎉 完成プレビュー（2枚）
+              <h2 style={{ ...headingStyle, fontSize: "24px" }}>
+                🎉 かんせいプレビュー（2まい）
               </h2>
-              <p style={{ color: "#00d4ff", fontSize: "11px", margin: 0, fontFamily: "'DotGothic16', sans-serif", letterSpacing: "2px" }}>
-                PREVIEW - 2 CARDS
+              <p style={subHeadingStyle}>
+                ✨ PREVIEW - 2 CARDS ✨
               </p>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "20px" }}>
               <div>
-                <p style={{ textAlign: "center", color: "#ff66b2", fontSize: "13px", marginBottom: "8px", fontFamily: "'DotGothic16', sans-serif" }}>🚗 1枚目</p>
+                <p style={{ textAlign: "center", color: "#d63384", fontSize: "14px", marginBottom: "8px", fontFamily: "'M PLUS Rounded 1c', sans-serif", fontWeight: 800 }}>🎀 1まいめ</p>
                 <LicenseCardPreview data={card1} />
               </div>
               <div>
-                <p style={{ textAlign: "center", color: "#00d4ff", fontSize: "13px", marginBottom: "8px", fontFamily: "'DotGothic16', sans-serif" }}>🏎️ 2枚目</p>
+                <p style={{ textAlign: "center", color: "#0088cc", fontSize: "14px", marginBottom: "8px", fontFamily: "'M PLUS Rounded 1c', sans-serif", fontWeight: 800 }}>⭐ 2まいめ</p>
                 <LicenseCardPreview data={card2.nickname ? card2 : card1} />
               </div>
             </div>
 
-            <p style={{ textAlign: "center", color: "rgba(255,255,255,0.6)", fontSize: "12px", marginBottom: "16px", fontFamily: "'DotGothic16', sans-serif" }}>
-              A4用紙（210×297mm）に2枚並べた画像を生成します
+            <p style={{ textAlign: "center", color: "#d63384", fontSize: "13px", marginBottom: "16px", fontFamily: "'M PLUS Rounded 1c', sans-serif", fontWeight: 700 }}>
+              📄 A4用紙（210×297mm）に2枚並べた画像を生成します
             </p>
 
             <button
@@ -1011,18 +1089,18 @@ export default function LicenseMaker() {
                 display: "block", width: "100%", maxWidth: "400px", margin: "0 auto",
                 padding: "18px",
                 background: isDownloading
-                  ? "rgba(255,255,255,0.2)"
-                  : "linear-gradient(135deg, #00d4ff, #0088cc)",
-                border: "none", borderRadius: "16px", color: "#fff",
-                fontWeight: 700, fontSize: "18px", cursor: isDownloading ? "not-allowed" : "pointer",
-                fontFamily: "'DotGothic16', sans-serif",
-                boxShadow: isDownloading ? "none" : "0 6px 0 #005588",
-                letterSpacing: "1px",
+                  ? "#ccc"
+                  : "linear-gradient(135deg, #00c6ff, #0072ff)",
+                border: "none", borderRadius: "50px", color: "#fff",
+                fontWeight: 900, fontSize: "18px", cursor: isDownloading ? "not-allowed" : "pointer",
+                fontFamily: "'M PLUS Rounded 1c', sans-serif",
+                boxShadow: isDownloading ? "none" : "0 6px 0 #004bb5",
+                letterSpacing: "2px",
               }}
             >
-              {isDownloading ? "生成中..." : "📱 スマホにダウンロードする"}
+              {isDownloading ? "✨ 生成中..." : "📱 ダウンロードする！"}
               <br />
-              <span style={{ fontSize: "11px", letterSpacing: "2px", opacity: 0.8 }}>DOWNLOAD TO PHONE</span>
+              <span style={{ fontSize: "11px", letterSpacing: "3px", opacity: 0.85 }}>DOWNLOAD TO PHONE</span>
             </button>
           </div>
         </div>
@@ -1034,6 +1112,10 @@ export default function LicenseMaker() {
           .license-grid {
             grid-template-columns: 1fr !important;
           }
+        }
+        @keyframes pop-bounce {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.05); }
         }
       `}</style>
     </div>
