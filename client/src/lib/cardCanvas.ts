@@ -507,10 +507,13 @@ export async function downloadDualCard(card1: CardData, card2: CardData): Promis
   ctx.fillRect(0, 0, SHEET_W_PX, SHEET_H_PX);
 
   // Card 1 (top)
-  await renderCardForSheet(card1, ctx, MARGIN_LEFT, MARGIN_TOP);
+  // 1枚目は元の18mm位置（213px）に戻す：MARGIN_TOP(189px) + 2mm(24px) = 213px
+  const card1Top = MARGIN_TOP + Math.round(2.0 * (300 / 25.4)); // 213 px = 18mm
+  await renderCardForSheet(card1, ctx, MARGIN_LEFT, card1Top);
 
   // Card 2 (bottom)
-  const card2Top = MARGIN_TOP + CARD_SHEET_H + CARD_GAP;
+  // 2枚目は固定値880px（前回修正済みの位置）を維持
+  const card2Top = 880; // 固定: 16mm上余白 + 638pxカード高 + 53px間隔 = 880px
   await renderCardForSheet(card2, ctx, MARGIN_LEFT, card2Top);
 
   // Export as PNG
