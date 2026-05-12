@@ -246,10 +246,10 @@ export default function CardPreview({ cardData }: CardPreviewProps) {
         {specialMove && (
           <div
             style={{
-              fontSize: "10px",
+              fontSize: "12px", // +2: 10→12px
               fontWeight: 900,
               color: colors.primary,
-              textShadow: `0 0 6px ${colors.glow}, 1px 1px 0 #000, -1px -1px 0 #000`,
+              textShadow: `0 0 6px ${colors.glow}, 1px 1px 0 #000, -1px -1px 0 #000, 0 0 2px #000`,
               whiteSpace: "nowrap",
               overflow: "hidden",
               textOverflow: "ellipsis",
@@ -263,9 +263,10 @@ export default function CardPreview({ cardData }: CardPreviewProps) {
         {description && (
           <p
             style={{
-              fontSize: "8px",
+              fontSize: "10px", // +2: 8→10px
+              fontWeight: 700, // bold化
               color: "#ffffff",
-              textShadow: "1px 1px 0 #000, -1px -1px 0 #000",
+              textShadow: "1px 1px 0 #000, -1px -1px 0 #000, 0 0 2px #000",
               lineHeight: "1.3",
               display: "-webkit-box",
               WebkitLineClamp: 2,

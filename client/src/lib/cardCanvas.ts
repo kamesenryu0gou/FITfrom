@@ -218,7 +218,7 @@ export async function renderCardToBlob(cardData: CardData, scale = 3): Promise<B
   const hasDesc  = Boolean(cardData.description);
 
   if (hasMove && hasDesc) {
-    ctx.font = `900 10px 'Noto Sans JP', sans-serif`;
+    ctx.font = `900 12px 'Noto Sans JP', sans-serif`; // +2: 10→12px
     ctx.textAlign = "left";
     drawOutlinedText(
       ctx,
@@ -226,19 +226,19 @@ export async function renderCardToBlob(cardData: CardData, scale = 3): Promise<B
       BAR_LEFT + 8,
       LOWER_BAR_TOP + LOWER_BAR_HEIGHT * 0.3,
       colors.primary,
-      2
+      3 // アウトライン強化
     );
-    ctx.font = `400 8px 'Noto Sans JP', sans-serif`;
+    ctx.font = `700 10px 'Noto Sans JP', sans-serif`; // +2: 8→10px, bold化
     drawOutlinedText(
       ctx,
       cardData.description,
       BAR_LEFT + 8,
       LOWER_BAR_TOP + LOWER_BAR_HEIGHT * 0.72,
       "#ffffff",
-      2
+      3 // アウトライン強化
     );
   } else if (hasMove) {
-    ctx.font = `900 10px 'Noto Sans JP', sans-serif`;
+    ctx.font = `900 12px 'Noto Sans JP', sans-serif`; // +2: 10→12px
     ctx.textAlign = "left";
     drawOutlinedText(
       ctx,
@@ -246,12 +246,12 @@ export async function renderCardToBlob(cardData: CardData, scale = 3): Promise<B
       BAR_LEFT + 8,
       lowerMid,
       colors.primary,
-      2
+      3 // アウトライン強化
     );
   } else if (hasDesc) {
-    ctx.font = `400 8px 'Noto Sans JP', sans-serif`;
+    ctx.font = `700 10px 'Noto Sans JP', sans-serif`; // +2: 8→10px, bold化
     ctx.textAlign = "left";
-    drawOutlinedText(ctx, cardData.description, BAR_LEFT + 8, lowerMid, "#ffffff", 2);
+    drawOutlinedText(ctx, cardData.description, BAR_LEFT + 8, lowerMid, "#ffffff", 3); // アウトライン強化
   }
 
   // ── Export ───────────────────────────────────────────────────────────────
@@ -464,19 +464,19 @@ async function renderCardForSheet(
   const hasDesc  = Boolean(cardData.description);
 
   if (hasMove && hasDesc) {
-    tmpCtx.font = `900 10px 'Noto Sans JP', sans-serif`;
+    tmpCtx.font = `900 12px 'Noto Sans JP', sans-serif`; // +2: 10→12px
     tmpCtx.textAlign = "left";
-    drawOutlinedText(tmpCtx, `⚡ 必殺技：${cardData.specialMove}`, BAR_LEFT + 8, LOWER_BAR_TOP + LOWER_BAR_HEIGHT * 0.3, colors.primary, 2);
-    tmpCtx.font = `400 8px 'Noto Sans JP', sans-serif`;
-    drawOutlinedText(tmpCtx, cardData.description, BAR_LEFT + 8, LOWER_BAR_TOP + LOWER_BAR_HEIGHT * 0.72, "#ffffff", 2);
+    drawOutlinedText(tmpCtx, `⚡ 必殺技：${cardData.specialMove}`, BAR_LEFT + 8, LOWER_BAR_TOP + LOWER_BAR_HEIGHT * 0.3, colors.primary, 3);
+    tmpCtx.font = `700 10px 'Noto Sans JP', sans-serif`; // +2: 8→10px, bold化
+    drawOutlinedText(tmpCtx, cardData.description, BAR_LEFT + 8, LOWER_BAR_TOP + LOWER_BAR_HEIGHT * 0.72, "#ffffff", 3);
   } else if (hasMove) {
-    tmpCtx.font = `900 10px 'Noto Sans JP', sans-serif`;
+    tmpCtx.font = `900 12px 'Noto Sans JP', sans-serif`; // +2: 10→12px
     tmpCtx.textAlign = "left";
-    drawOutlinedText(tmpCtx, `⚡ 必殺技：${cardData.specialMove}`, BAR_LEFT + 8, lowerMid, colors.primary, 2);
+    drawOutlinedText(tmpCtx, `⚡ 必殺技：${cardData.specialMove}`, BAR_LEFT + 8, lowerMid, colors.primary, 3);
   } else if (hasDesc) {
-    tmpCtx.font = `400 8px 'Noto Sans JP', sans-serif`;
+    tmpCtx.font = `700 10px 'Noto Sans JP', sans-serif`; // +2: 8→10px, bold化
     tmpCtx.textAlign = "left";
-    drawOutlinedText(tmpCtx, cardData.description, BAR_LEFT + 8, lowerMid, "#ffffff", 2);
+    drawOutlinedText(tmpCtx, cardData.description, BAR_LEFT + 8, lowerMid, "#ffffff", 3);
   }
 
   // 縦向きカードを90°時計回りに回転してシートに貼り付ける

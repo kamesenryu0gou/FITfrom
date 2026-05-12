@@ -191,7 +191,7 @@ export async function renderLicenseCardToBlob(
   }
 
   // ── Layer 3: テキスト ────────────────────────────────────────────────────
-  ctx.fillStyle = "#222222";
+  ctx.fillStyle = "#000000"; // 視認性向上: #222222→#000000
   ctx.textBaseline = "middle";
 
   // 名前
@@ -207,7 +207,7 @@ export async function renderLicenseCardToBlob(
   // 長所
   if (data.strength) {
     const fontSize = data.strength.length > 12 ? 14 : data.strength.length > 8 ? 16 : 18;
-    ctx.font = `normal ${fontSize}px 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', sans-serif`;
+    ctx.font = `bold ${fontSize}px 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', sans-serif`; // bold化
     ctx.textAlign = "left";
     const kyoshoX = LABEL_R + 10;
     const kyoshoY = (KYOSHO_Y1 + KYOSHO_Y2) / 2;
@@ -217,7 +217,7 @@ export async function renderLicenseCardToBlob(
   // 日付
   if (data.date) {
     const fontSize = 16;
-    ctx.font = `normal ${fontSize}px 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', sans-serif`;
+    ctx.font = `bold ${fontSize}px 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', sans-serif`; // bold化
     ctx.textAlign = "left";
     const dateX = LABEL_R + 10;
     const dateY = (DATE_Y1 + DATE_Y2) / 2;
@@ -233,7 +233,7 @@ export async function renderLicenseCardToBlob(
     const fontSize = charCount > 40 ? 18 : charCount > 20 ? 22 : 26;
     const lineHeight = fontSize * 1.6;
     const maxLines = Math.floor(areaH / lineHeight);
-    ctx.font = `normal ${fontSize}px 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', sans-serif`;
+    ctx.font = `bold ${fontSize}px 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', sans-serif`; // bold化
     ctx.textAlign = "left";
     drawWrappedText(
       ctx,
@@ -249,7 +249,7 @@ export async function renderLicenseCardToBlob(
   // 将来の夢
   if (data.dream) {
     const fontSize = data.dream.length > 10 ? 14 : 16;
-    ctx.font = `normal ${fontSize}px 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', sans-serif`;
+    ctx.font = `bold ${fontSize}px 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', sans-serif`; // bold化
     ctx.textAlign = "left";
     const yumeX = LABEL_R + 10;
     const yumeY = (YUME_Y1 + YUME_Y2) / 2;
@@ -259,7 +259,7 @@ export async function renderLicenseCardToBlob(
   // 発行
   if (data.issuer) {
     const fontSize = 14;
-    ctx.font = `normal ${fontSize}px 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', sans-serif`;
+    ctx.font = `bold ${fontSize}px 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', sans-serif`; // bold化
     ctx.textAlign = "left";
     const hakkoX = LABEL_R + 10;
     const hakkoY = (HAKKO_Y1 + HAKKO_Y2) / 2;
@@ -322,15 +322,19 @@ export async function renderLicenseSheetToBlob(
   sCtx.fillRect(0, 0, SHEET_W, SHEET_H);
 
   // 1枚目を描画
+  // 1枚目は2mm下へ中央寄せ: MARGIN_TOP(213px) + 2mm(24px) = 237px
+  const card1Top = MARGIN_TOP + Math.round(2.0 * MM); // 237 px = 20mm
   const blob1 = await renderLicenseCardToBlob(data1, SCALE);
   const img1 = await loadImage(URL.createObjectURL(blob1));
-  sCtx.drawImage(img1, MARGIN_LEFT, MARGIN_TOP, CARD_SHEET_W, CARD_SHEET_H);
+  sCtx.drawImage(img1, MARGIN_LEFT, card1Top, CARD_SHEET_W, CARD_SHEET_H);
 
   // 2枚目を描画
+  // 2枚目は固定値904px（変更しない）
+  const card2Top = 904; // 固定: 18mm上余白 + 638pxカード高 + 53px間隔 = 904px
   const data2Effective = data2 ?? data1;
   const blob2 = await renderLicenseCardToBlob(data2Effective, SCALE);
   const img2 = await loadImage(URL.createObjectURL(blob2));
-  sCtx.drawImage(img2, MARGIN_LEFT, MARGIN_TOP + CARD_SHEET_H + CARD_GAP, CARD_SHEET_W, CARD_SHEET_H);
+  sCtx.drawImage(img2, MARGIN_LEFT, card2Top, CARD_SHEET_W, CARD_SHEET_H);
 
   return new Promise<Blob>((resolve, reject) => {
     sheet.toBlob(

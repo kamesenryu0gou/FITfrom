@@ -533,7 +533,7 @@ async function renderLicenseCardOnCanvas(
   ctx.drawImage(baseImg, 0, 0, CARD_W, CARD_H);
 
   ctx.textBaseline = "middle";
-  ctx.fillStyle = "#1a1a2e";
+  ctx.fillStyle = "#000000"; // 視認性向上: #1a1a2e→#000000
   ctx.textAlign = "left";
 
   const formatDate = (d: string) => {
@@ -643,14 +643,18 @@ async function downloadLicenseSheet(card1: LicenseData, card2: LicenseData) {
   ctx.fillRect(0, 0, SHEET_W, SHEET_H);
   const baseImg = await loadImg(LICENSE_CARD_BASE_URL);
 
+  // 1枚目: MARGIN_TOP(213px=18mm) + 2mm(24px) = 237px（2mm中央寄せ）
+  const card1Top = MARGIN_TOP + Math.round(2.0 * MM); // 237px = 20mm
   ctx.save();
-  ctx.translate(MARGIN_L, MARGIN_TOP);
+  ctx.translate(MARGIN_L, card1Top);
   ctx.scale(FIT_SCALE, FIT_SCALE);
   await renderLicenseCardOnCanvas(ctx, card1, baseImg);
   ctx.restore();
 
+  // 2枚目: 固定値904px（変更しない）
+  const card2Top = 904; // 固定: 18mm上余白(213px) + 638pxカード高 + 53px間隔 = 904px
   ctx.save();
-  ctx.translate(MARGIN_L, MARGIN_TOP + CARD_PX_H + GAP);
+  ctx.translate(MARGIN_L, card2Top);
   ctx.scale(FIT_SCALE, FIT_SCALE);
   await renderLicenseCardOnCanvas(ctx, card2, baseImg);
   ctx.restore();
