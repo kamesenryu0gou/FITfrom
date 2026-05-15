@@ -89,7 +89,7 @@
 - [ ] 免許メーカー UI：同上の進行状況・ボタン無効化・段階的エラーメッセージ
 - [ ] 画像前処理：アップロード時に自動リサイズ・JPEG統一・容量圧縮
 - [x] FIT WARS・免許メーカー AI加工：「The string did not match the expected pattern.」エラー修正（OpenAI直接呼び出し→Manus組み込みgenerateImageヘルパーに変更）
-- [ ] トリミング後のAI加工失敗：CropModal後のbase64データ形式を確認・修正
+- [x] トリミング後のAI加工失敗：CropModal後のbase64データ形式を確認・修正（photoFileではなくphotoUrl=トリミング済みJPEG data URLを使用するよう修正）
 - [ ] ドメイン外れ問題：fitform.makefrom1.comからページ遷移時にドメインが変わる問題を調査・修正
 - [x] iPhone Chrome AI加工100%失敗：送信前にCanvas APIで画像リサイズ・圧縮（最大1024px、JPEG 80%）を実装してiPhoneの大容量写真問題を解消- [x] FIT WARS：ダウンロードボタンで全デバイス統一（iOS/Android/PC問わたia.download方式でJPEG保存）、長押し保存廃止
 - [x] 免許メーカー：ダウンロードボタンで全デバイス統一（iOS/Android/PC問わたia.download方式でJPEG保存）、長押し保存廃止- [x] 写真アップロード時に全デバイス共通でCanvas圧縮（最大1024px・JPEG 80%）を適用（FIT WARS・免許メーカー両方）

@@ -216,7 +216,9 @@ export default function CardForm({
   );
 
   const handleCropDone = useCallback((croppedUrl: string) => {
-    updateCardData({ photoUrl: croppedUrl, photoFile: pendingFile });
+    // originalPhotoUrlにトリミング済み JPEG data URLを保持。
+    // AI加工後に photoUrl が上書きされてもこちらは変わらない。
+    updateCardData({ photoUrl: croppedUrl, photoFile: pendingFile, originalPhotoUrl: croppedUrl });
     setCropModalSrc(null);
     setPendingFile(null);
     toast.success("写真をトリミングしました！");

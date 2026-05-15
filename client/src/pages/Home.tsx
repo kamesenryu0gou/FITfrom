@@ -23,6 +23,8 @@ export interface CardData {
   rarity: string;
   photoUrl: string | null;
   photoFile: File | null;
+  /** トリミング済み JPEG data URLを保持。AI加工後に photoUrl が上書きされてもこちらは変わらない */
+  originalPhotoUrl: string | null;
   specialMove: string;
   attack: number | null;
   description: string;
@@ -35,6 +37,7 @@ const INITIAL_CARD_DATA: CardData = {
   rarity: "",
   photoUrl: null,
   photoFile: null,
+  originalPhotoUrl: null,
   specialMove: "",
   attack: null,
   description: "",
@@ -66,15 +69,18 @@ export default function Home() {
   }, []);
 
   const handleAIAnime1 = useCallback(async () => {
-    if (!card1.photoUrl) {
+    // originalPhotoUrl（トリミング済み JPEG data URL）を優先使用。
+    // AI加工後に photoUrl が /manus-storage/... に上書きされてもこちらは変わらない。
+    const sourceUrl = card1.originalPhotoUrl || card1.photoUrl;
+    if (!sourceUrl || !sourceUrl.startsWith("data:")) {
       toast.error("1枚目の写真をアップロードしてください");
       return;
     }
     setIsGeneratingAI1(true);
     toast.info("1枚目：AIがDQ風チビキャラに変換中... 30～60秒ほどお待ちください");
     try {
-      // photoUrl はトリミング済み JPEG 80% の data URL → OpenAI が確実に受け付けられる形式
-      const [header, base64] = card1.photoUrl.split(",");
+      // originalPhotoUrl はトリミング済み JPEG 80% の data URL → OpenAI が確実に受け付けられる形式
+      const [header, base64] = sourceUrl.split(",");
       const mimeType = header.match(/data:([^;]+)/)?.[1] || "image/jpeg";
       const result = await convertToAnimeMutation1.mutateAsync({
         photoBase64: base64,
@@ -93,18 +99,21 @@ export default function Home() {
     } finally {
       setIsGeneratingAI1(false);
     }
-  }, [card1.photoUrl, card1.element, updateCard1, convertToAnimeMutation1]);
+  }, [card1.originalPhotoUrl, card1.photoUrl, card1.element, updateCard1, convertToAnimeMutation1]);
 
   const handleAIAnime2 = useCallback(async () => {
-    if (!card2.photoUrl) {
+    // originalPhotoUrl（トリミング済み JPEG data URL）を優先使用。
+    // AI加工後に photoUrl が /manus-storage/... に上書きされてもこちらは変わらない。
+    const sourceUrl = card2.originalPhotoUrl || card2.photoUrl;
+    if (!sourceUrl || !sourceUrl.startsWith("data:")) {
       toast.error("2枚目の写真をアップロードしてください");
       return;
     }
     setIsGeneratingAI2(true);
     toast.info("2枚目：AIがDQ風チビキャラに変換中... 30～60秒ほどお待ちください");
     try {
-      // photoUrl はトリミング済み JPEG 80% の data URL → OpenAI が確実に受け付けられる形式
-      const [header, base64] = card2.photoUrl.split(",");
+      // originalPhotoUrl はトリミング済み JPEG 80% の data URL → OpenAI が確実に受け付けられる形式
+      const [header, base64] = sourceUrl.split(",");
       const mimeType = header.match(/data:([^;]+)/)?.[1] || "image/jpeg";
       const result = await convertToAnimeMutation2.mutateAsync({
         photoBase64: base64,
@@ -123,7 +132,7 @@ export default function Home() {
     } finally {
       setIsGeneratingAI2(false);
     }
-  }, [card2.photoUrl, card2.element, updateCard2, convertToAnimeMutation2]);
+  }, [card2.originalPhotoUrl, card2.photoUrl, card2.element, updateCard2, convertToAnimeMutation2]);
 
   const handleDownload = useCallback(async () => {
     setIsDownloading(true);
