@@ -197,7 +197,7 @@ export default function Home() {
           {/* Logo */}
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
             <img
-              src="/manus-storage/fitwars-logo_890a85a0.png"
+              src="/manus-storage/fitwars-logo-transparent_1267048b.png"
               alt="FIT WARS"
               style={{ height: "48px", objectFit: "contain" }}
             />

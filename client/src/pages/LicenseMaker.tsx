@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import Cropper from "react-easy-crop";
 import { trpc } from "@/lib/trpc";
 
-const LICENSE_LOGO_URL = "/manus-storage/license-maker-logo-new2_eff90f28.png";
+const LICENSE_LOGO_URL = "/manus-storage/license-maker-logo-v3_378adfe6.png";
 const LICENSE_CARD_BASE_URL = "/manus-storage/license-card-base_65f89f3f.png";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
