@@ -5,6 +5,7 @@ import { publicProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { storagePut } from "./storage";
 import sharp from "sharp";
+import { enqueueAiTask, getQueueDepth } from "./aiQueue";
 
 /**
  * AI Anime Conversion — DQ風チビキャラ変換 v4 (Clean Reset)
@@ -290,56 +291,81 @@ async function generateAnimeCharacter(options: {
   }
 
   // multipart/form-data 形式で送信（images/edits エンドポイントの正式仕様）
-  const formData = new FormData();
-  // Buffer→ArrayBuffer変換でTypeScript型エラーを回避
-  const imageArrayBuffer = jpegBuffer.buffer.slice(jpegBuffer.byteOffset, jpegBuffer.byteOffset + jpegBuffer.byteLength) as ArrayBuffer;
-  const imageBlob = new Blob([imageArrayBuffer], { type: "image/jpeg" });
-  formData.append("image[]", imageBlob, "photo.jpg");
-  formData.append("model", "gpt-image-1");
-  formData.append("prompt", prompt);
-  formData.append("n", "1");
-  formData.append("size", "1024x1024");
-  formData.append("quality", "high");
+  // レート制限エラー時は指数バックオフで最大3回リトライ
+  const MAX_RETRIES = 3;
+  const RETRY_DELAYS = [5000, 15000, 30000]; // 5秒・15秒・30秒
 
-  const editResponse = await fetch("https://api.openai.com/v1/images/edits", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      // Content-Type は FormData が自動設定するため指定しない
-    },
-    body: formData,
-  });
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const formData = new FormData();
+    const imageArrayBuffer = jpegBuffer.buffer.slice(jpegBuffer.byteOffset, jpegBuffer.byteOffset + jpegBuffer.byteLength) as ArrayBuffer;
+    const imageBlob = new Blob([imageArrayBuffer], { type: "image/jpeg" });
+    formData.append("image[]", imageBlob, "photo.jpg");
+    formData.append("model", "gpt-image-1");
+    formData.append("prompt", prompt);
+    formData.append("n", "1");
+    formData.append("size", "1024x1024");
+    formData.append("quality", "high");
 
-  if (!editResponse.ok) {
-    const err = await editResponse.json().catch(() => ({})) as { error?: { message?: string } };
-    throw new Error(`gpt-image-1 edit error: ${err?.error?.message || editResponse.status}`);
+    const editResponse = await fetch("https://api.openai.com/v1/images/edits", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        // Content-Type は FormData が自動設定するため指定しない
+      },
+      body: formData,
+    });
+
+    if (!editResponse.ok) {
+      // レスポンスボディをテキストで取得（JSONでない場合もある）
+      const rawText = await editResponse.text().catch(() => "");
+      let errMessage: string;
+      try {
+        const errJson = JSON.parse(rawText) as { error?: { message?: string } };
+        errMessage = errJson?.error?.message || rawText || String(editResponse.status);
+      } catch {
+        errMessage = rawText || String(editResponse.status);
+      }
+
+      // レート制限エラー（429）またはメッセージに「Rate」が含まれる場合はリトライ
+      const isRateLimit = editResponse.status === 429 || errMessage.toLowerCase().includes("rate");
+      if (isRateLimit && attempt < MAX_RETRIES) {
+        const delay = RETRY_DELAYS[attempt];
+        console.log(`[AI] Rate limit hit, retrying in ${delay / 1000}s... (attempt ${attempt + 1}/${MAX_RETRIES})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+
+      throw new Error(`AI画像加工に失敗しました。しばらく時間をおいてから再試行してください。(${errMessage})`);
+    }
+
+    const editData = await editResponse.json() as { data?: Array<{ b64_json?: string; url?: string }> };
+    const b64 = editData.data?.[0]?.b64_json;
+    const imageUrl = editData.data?.[0]?.url;
+
+    if (b64) {
+      const buffer = Buffer.from(b64, "base64");
+      const { url } = await storagePut(
+        `anime-converted/${Date.now()}.png`,
+        buffer,
+        "image/png"
+      );
+      return url;
+    } else if (imageUrl) {
+      const imgRes = await fetch(imageUrl);
+      if (!imgRes.ok) throw new Error("Failed to download generated image");
+      const imgBuffer = Buffer.from(await imgRes.arrayBuffer());
+      const { url } = await storagePut(
+        `anime-converted/${Date.now()}.png`,
+        imgBuffer,
+        "image/png"
+      );
+      return url;
+    }
+
+    throw new Error("No image data returned from gpt-image-1");
   }
 
-  const editData = await editResponse.json() as { data?: Array<{ b64_json?: string; url?: string }> };
-  const b64 = editData.data?.[0]?.b64_json;
-  const imageUrl = editData.data?.[0]?.url;
-
-  if (b64) {
-    const buffer = Buffer.from(b64, "base64");
-    const { url } = await storagePut(
-      `anime-converted/${Date.now()}.png`,
-      buffer,
-      "image/png"
-    );
-    return url;
-  } else if (imageUrl) {
-    const imgRes = await fetch(imageUrl);
-    if (!imgRes.ok) throw new Error("Failed to download generated image");
-    const imgBuffer = Buffer.from(await imgRes.arrayBuffer());
-    const { url } = await storagePut(
-      `anime-converted/${Date.now()}.png`,
-      imgBuffer,
-      "image/png"
-    );
-    return url;
-  }
-
-  throw new Error("No image data returned from gpt-image-1");
+  throw new Error("AI画像加工に失敗しました。しばらく時間をおいてから再試行してください。");
 }
 
 // ── License Maker: Sugar Rush anime-style character conversion ────────────────────────────────────
@@ -387,47 +413,73 @@ async function generateLicenseCharacter(options: {
   }
 
   // multipart/form-data 形式で送信（images/edits エンドポイントの正式仕様）
-  const formData = new FormData();
-  const imageArrayBuffer = jpegBuffer.buffer.slice(jpegBuffer.byteOffset, jpegBuffer.byteOffset + jpegBuffer.byteLength) as ArrayBuffer;
-  const imageBlob = new Blob([imageArrayBuffer], { type: "image/jpeg" });
-  formData.append("image[]", imageBlob, "photo.jpg");
-  formData.append("model", "gpt-image-1");
-  formData.append("prompt", LICENSE_CARS_PROMPT);
-  formData.append("n", "1");
-  formData.append("size", "1024x1024");
-  formData.append("quality", "high");
+  // レート制限エラー時は指数バックオフで最大3回リトライ
+  const MAX_RETRIES = 3;
+  const RETRY_DELAYS = [5000, 15000, 30000]; // 5秒・15秒・30秒
 
-  const editResponse = await fetch("https://api.openai.com/v1/images/edits", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      // Content-Type は FormData が自動設定するため指定しない
-    },
-    body: formData,
-  });
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const formData = new FormData();
+    const imageArrayBuffer = jpegBuffer.buffer.slice(jpegBuffer.byteOffset, jpegBuffer.byteOffset + jpegBuffer.byteLength) as ArrayBuffer;
+    const imageBlob = new Blob([imageArrayBuffer], { type: "image/jpeg" });
+    formData.append("image[]", imageBlob, "photo.jpg");
+    formData.append("model", "gpt-image-1");
+    formData.append("prompt", LICENSE_CARS_PROMPT);
+    formData.append("n", "1");
+    formData.append("size", "1024x1024");
+    formData.append("quality", "high");
 
-  if (!editResponse.ok) {
-    const err = await editResponse.json().catch(() => ({})) as { error?: { message?: string } };
-    throw new Error(`gpt-image-1 edit error: ${err?.error?.message || editResponse.status}`);
+    const editResponse = await fetch("https://api.openai.com/v1/images/edits", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        // Content-Type は FormData が自動設定するため指定しない
+      },
+      body: formData,
+    });
+
+    if (!editResponse.ok) {
+      // レスポンスボディをテキストで取得（JSONでない場合もある）
+      const rawText = await editResponse.text().catch(() => "");
+      let errMessage: string;
+      try {
+        const errJson = JSON.parse(rawText) as { error?: { message?: string } };
+        errMessage = errJson?.error?.message || rawText || String(editResponse.status);
+      } catch {
+        errMessage = rawText || String(editResponse.status);
+      }
+
+      // レート制限エラー（429）またはメッセージに「Rate」が含まれる場合はリトライ
+      const isRateLimit = editResponse.status === 429 || errMessage.toLowerCase().includes("rate");
+      if (isRateLimit && attempt < MAX_RETRIES) {
+        const delay = RETRY_DELAYS[attempt];
+        console.log(`[AI License] Rate limit hit, retrying in ${delay / 1000}s... (attempt ${attempt + 1}/${MAX_RETRIES})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+
+      throw new Error(`AI画像加工に失敗しました。しばらく時間をおいてから再試行してください。(${errMessage})`);
+    }
+
+    const editData = await editResponse.json() as { data?: Array<{ b64_json?: string; url?: string }> };
+    const b64 = editData.data?.[0]?.b64_json;
+    const imageUrl = editData.data?.[0]?.url;
+
+    if (b64) {
+      const buffer = Buffer.from(b64, "base64");
+      const { url } = await storagePut(`license-converted/${Date.now()}.png`, buffer, "image/png");
+      return url;
+    } else if (imageUrl) {
+      const imgRes = await fetch(imageUrl);
+      if (!imgRes.ok) throw new Error("Failed to download generated image");
+      const imgBuffer = Buffer.from(await imgRes.arrayBuffer());
+      const { url } = await storagePut(`license-converted/${Date.now()}.png`, imgBuffer, "image/png");
+      return url;
+    }
+
+    throw new Error("No image data returned from gpt-image-1");
   }
 
-  const editData = await editResponse.json() as { data?: Array<{ b64_json?: string; url?: string }> };
-  const b64 = editData.data?.[0]?.b64_json;
-  const imageUrl = editData.data?.[0]?.url;
-
-  if (b64) {
-    const buffer = Buffer.from(b64, "base64");
-    const { url } = await storagePut(`license-converted/${Date.now()}.png`, buffer, "image/png");
-    return url;
-  } else if (imageUrl) {
-    const imgRes = await fetch(imageUrl);
-    if (!imgRes.ok) throw new Error("Failed to download generated image");
-    const imgBuffer = Buffer.from(await imgRes.arrayBuffer());
-    const { url } = await storagePut(`license-converted/${Date.now()}.png`, imgBuffer, "image/png");
-    return url;
-  }
-
-  throw new Error("No image data returned from gpt-image-1");
+  throw new Error("AI画像加工に失敗しました。しばらく時間をおいてから再試行してください。");
 }
 
 export const appRouter = router({
@@ -442,6 +494,9 @@ export const appRouter = router({
   }),
 
   license: router({
+    // キュー待機人数を返すクエリ（フロントエンドのポーリング用）
+    queueDepth: publicProcedure.query(() => ({ depth: getQueueDepth() })),
+
     convertToCarStyle: publicProcedure
       .input(
         z.object({
@@ -450,15 +505,21 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
-        const imageUrl = await generateLicenseCharacter({
-          photoBase64: input.photoBase64,
-          mimeType: input.mimeType,
-        });
+        // キューに追加して直列処理（複数人同時利用でもレート制限を回避）
+        const imageUrl = await enqueueAiTask(() =>
+          generateLicenseCharacter({
+            photoBase64: input.photoBase64,
+            mimeType: input.mimeType,
+          })
+        );
         return { imageUrl };
       }),
   }),
 
   card: router({
+    // キュー待機人数を返すクエリ（フロントエンドのポーリング用）
+    queueDepth: publicProcedure.query(() => ({ depth: getQueueDepth() })),
+
     convertToAnime: publicProcedure
       .input(
         z.object({
@@ -468,11 +529,14 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
-        const imageUrl = await generateAnimeCharacter({
-          photoBase64: input.photoBase64,
-          mimeType: input.mimeType,
-          element: input.element,
-        });
+        // キューに追加して直列処理（複数人同時利用でもレート制限を回避）
+        const imageUrl = await enqueueAiTask(() =>
+          generateAnimeCharacter({
+            photoBase64: input.photoBase64,
+            mimeType: input.mimeType,
+            element: input.element,
+          })
+        );
         return { imageUrl };
       }),
   }),

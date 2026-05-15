@@ -358,25 +358,29 @@ export async function downloadLicenseSheet(
   filename = "license-card.png"
 ): Promise<void> {
   const blob = await renderLicenseSheetToBlob(data1, data2);
-  const file = new File([blob], filename, { type: "image/png" });
 
-  if (
-    typeof navigator.share === "function" &&
-    typeof navigator.canShare === "function" &&
-    navigator.canShare({ files: [file] })
-  ) {
-    try {
-      await navigator.share({
-        files: [file],
-        title: "免許メーカー",
-        text: "オリジナル免許証",
-      });
-      return;
-    } catch (err) {
-      if ((err as Error).name === "AbortError") return;
+  // iOS検出：User Agentに iPhone/iPad が含まれるかチェック
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+  if (isIOS) {
+    // iOS: 新しいタブで画像を開く→ユーザーが長押しで「写真に保存」できる
+    const url = URL.createObjectURL(blob);
+    const newTab = window.open(url, "_blank");
+    if (!newTab) {
+      // ポップアップブロック時はアンカーフォールバック
+      const a = document.createElement("a");
+      a.href = url;
+      a.target = "_blank";
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     }
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+    return;
   }
 
+  // Android / デスクトップ: <a download> でダウンロード
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;

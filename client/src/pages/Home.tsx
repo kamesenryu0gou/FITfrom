@@ -7,7 +7,7 @@
  * - ダウンロードボタンは最下部に1つのみ
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import CardPreview from "@/components/CardPreview";
@@ -49,8 +49,19 @@ export default function Home() {
   const [isGeneratingAI1, setIsGeneratingAI1] = useState(false);
   const [isGeneratingAI2, setIsGeneratingAI2] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [queueWaiting, setQueueWaiting] = useState(0); // 待機人数
 
   const convertToAnimeMutation = trpc.card.convertToAnime.useMutation();
+
+  // AI加工中はキュー待機人数をポーリングして表示する
+  const isGeneratingAI = isGeneratingAI1 || isGeneratingAI2;
+  const { data: queueData } = trpc.card.queueDepth.useQuery(undefined, {
+    refetchInterval: isGeneratingAI ? 3000 : false,
+    enabled: isGeneratingAI,
+  });
+  useEffect(() => {
+    setQueueWaiting(queueData?.depth ?? 0);
+  }, [queueData]);
 
   const updateCard1 = useCallback((updates: Partial<CardData>) => {
     setCard1((prev) => ({ ...prev, ...updates }));
@@ -135,7 +146,12 @@ export default function Home() {
     toast.info("用紙サイズに合わせた画像を生成中...");
     try {
       await downloadDualCard(card1, card2);
-      toast.success("カードシートを保存しました！");
+      const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+      if (isIOS) {
+        toast.success("画像を開きました。画像を長押しして「写真に保存」をタップしてください", { duration: 6000 });
+      } else {
+        toast.success("カードシートを保存しました！");
+      }
     } catch (error) {
       const msg = error instanceof Error ? error.message : "不明なエラー";
       toast.error(`保存に失敗しました: ${msg}`);
@@ -333,6 +349,7 @@ export default function Home() {
             updateCardData={updateCard1}
             onAIAnime={handleAIAnime1}
             isGeneratingAI={isGeneratingAI1}
+            queueWaiting={isGeneratingAI1 ? queueWaiting : 0}
             hideDownload
           />
         </div>
@@ -393,6 +410,7 @@ export default function Home() {
             updateCardData={updateCard2}
             onAIAnime={handleAIAnime2}
             isGeneratingAI={isGeneratingAI2}
+            queueWaiting={isGeneratingAI2 ? queueWaiting : 0}
             hideDownload
           />
         </div>

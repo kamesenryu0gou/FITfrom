@@ -687,7 +687,17 @@ function LicenseForm({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [queueWaiting, setQueueWaiting] = useState(0);
   const convertToCarStyle = trpc.license.convertToCarStyle.useMutation();
+
+  // AI加工中はキュー待機人数をポーリングして表示する
+  const { data: queueData } = trpc.license.queueDepth.useQuery(undefined, {
+    refetchInterval: isGeneratingAI ? 3000 : false,
+    enabled: isGeneratingAI,
+  });
+  useEffect(() => {
+    setQueueWaiting(queueData?.depth ?? 0);
+  }, [queueData]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -849,7 +859,11 @@ function LicenseForm({
                 boxShadow: isGeneratingAI ? "none" : "0 4px 0 #004bb5",
               }}
             >
-              {isGeneratingAI ? "生成中..." : "AIイラスト化"}
+              {isGeneratingAI
+                ? (queueWaiting > 0
+                    ? `AI加工待機中... あなたの前に${queueWaiting}人待ちです`
+                    : "生成中...")
+                : "AIイラスト化"}
             </button>
           )}
         </div>
@@ -897,6 +911,12 @@ export default function LicenseMaker() {
     setIsDownloading(true);
     try {
       await downloadLicenseSheet(card1, card2.nickname ? card2 : card1);
+      const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+      if (isIOS) {
+        toast.success("画像を開きました。画像を長押しして「写真に保存」をタップしてください", { duration: 6000 });
+      } else {
+        toast.success("免許証を保存しました！");
+      }
     } catch (e) {
       toast.error("ダウンロードに失敗しました");
       console.error(e);

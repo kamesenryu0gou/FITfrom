@@ -142,6 +142,7 @@ interface CardFormProps {
   updateCardData: (updates: Partial<CardData>) => void;
   onAIAnime: () => void;
   isGeneratingAI: boolean;
+  queueWaiting?: number;
   cardPreviewRef?: React.RefObject<HTMLDivElement | null>;
   hideDownload?: boolean;
 }
@@ -180,6 +181,7 @@ export default function CardForm({
   updateCardData,
   onAIAnime,
   isGeneratingAI,
+  queueWaiting = 0,
   cardPreviewRef,
   hideDownload = false,
 }: CardFormProps) {
@@ -456,7 +458,9 @@ export default function CardForm({
               <span style={{ display: "inline-block", animation: "spin 1s linear infinite" }}>
                 ⚙️
               </span>
-              DQ風チビキャラ変換中... しばらくお待ちください
+              {queueWaiting > 0
+                ? `AI加工待機中... あなたの前に${queueWaiting}人待ちです`
+                : "DQ風チビキャラ変換中... しばらくお待ちください"}
             </>
           ) : (
             <>
