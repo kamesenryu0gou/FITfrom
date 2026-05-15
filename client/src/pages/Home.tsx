@@ -65,29 +65,17 @@ export default function Home() {
     setCard2((prev) => ({ ...prev, ...updates }));
   }, []);
 
-  const fileToBase64 = (file: File): Promise<{ base64: string; mimeType: string }> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result as string;
-        const [header, base64] = result.split(",");
-        const mimeType = header.match(/data:([^;]+)/)?.[1] || "image/jpeg";
-        resolve({ base64, mimeType });
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  };
-
   const handleAIAnime1 = useCallback(async () => {
-    if (!card1.photoFile) {
+    if (!card1.photoUrl) {
       toast.error("1枚目の写真をアップロードしてください");
       return;
     }
     setIsGeneratingAI1(true);
     toast.info("1枚目：AIがDQ風チビキャラに変換中... 30～60秒ほどお待ちください");
     try {
-      const { base64, mimeType } = await fileToBase64(card1.photoFile);
+      // photoUrl はトリミング済み JPEG 80% の data URL → OpenAI が確実に受け付けられる形式
+      const [header, base64] = card1.photoUrl.split(",");
+      const mimeType = header.match(/data:([^;]+)/)?.[1] || "image/jpeg";
       const result = await convertToAnimeMutation1.mutateAsync({
         photoBase64: base64,
         mimeType,
@@ -105,17 +93,19 @@ export default function Home() {
     } finally {
       setIsGeneratingAI1(false);
     }
-  }, [card1.photoFile, card1.element, updateCard1, convertToAnimeMutation1]);
+  }, [card1.photoUrl, card1.element, updateCard1, convertToAnimeMutation1]);
 
   const handleAIAnime2 = useCallback(async () => {
-    if (!card2.photoFile) {
+    if (!card2.photoUrl) {
       toast.error("2枚目の写真をアップロードしてください");
       return;
     }
     setIsGeneratingAI2(true);
     toast.info("2枚目：AIがDQ風チビキャラに変換中... 30～60秒ほどお待ちください");
     try {
-      const { base64, mimeType } = await fileToBase64(card2.photoFile);
+      // photoUrl はトリミング済み JPEG 80% の data URL → OpenAI が確実に受け付けられる形式
+      const [header, base64] = card2.photoUrl.split(",");
+      const mimeType = header.match(/data:([^;]+)/)?.[1] || "image/jpeg";
       const result = await convertToAnimeMutation2.mutateAsync({
         photoBase64: base64,
         mimeType,
@@ -133,7 +123,7 @@ export default function Home() {
     } finally {
       setIsGeneratingAI2(false);
     }
-  }, [card2.photoFile, card2.element, updateCard2, convertToAnimeMutation2]);
+  }, [card2.photoUrl, card2.element, updateCard2, convertToAnimeMutation2]);
 
   const handleDownload = useCallback(async () => {
     setIsDownloading(true);
