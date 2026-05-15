@@ -49,7 +49,9 @@ export default function Home() {
   const [isGeneratingAI1, setIsGeneratingAI1] = useState(false);
   const [isGeneratingAI2, setIsGeneratingAI2] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-  const convertToAnimeMutation = trpc.card.convertToAnime.useMutation();
+  // 1枚目・2枚目で別々の mutation インスタンスを使う（同一インスタンス共有だと競合してエラーになる）
+  const convertToAnimeMutation1 = trpc.card.convertToAnime.useMutation();
+  const convertToAnimeMutation2 = trpc.card.convertToAnime.useMutation();
   const { data: queueStatus } = trpc.ai.queueStatus.useQuery(undefined, {
     refetchInterval: (isGeneratingAI1 || isGeneratingAI2) ? 2000 : false,
   });
@@ -86,7 +88,7 @@ export default function Home() {
     toast.info("1枚目：AIがDQ風チビキャラに変換中... 30～60秒ほどお待ちください");
     try {
       const { base64, mimeType } = await fileToBase64(card1.photoFile);
-      const result = await convertToAnimeMutation.mutateAsync({
+      const result = await convertToAnimeMutation1.mutateAsync({
         photoBase64: base64,
         mimeType,
         element: card1.element,
@@ -103,7 +105,7 @@ export default function Home() {
     } finally {
       setIsGeneratingAI1(false);
     }
-  }, [card1.photoFile, card1.element, updateCard1, convertToAnimeMutation]);
+  }, [card1.photoFile, card1.element, updateCard1, convertToAnimeMutation1]);
 
   const handleAIAnime2 = useCallback(async () => {
     if (!card2.photoFile) {
@@ -114,7 +116,7 @@ export default function Home() {
     toast.info("2枚目：AIがDQ風チビキャラに変換中... 30～60秒ほどお待ちください");
     try {
       const { base64, mimeType } = await fileToBase64(card2.photoFile);
-      const result = await convertToAnimeMutation.mutateAsync({
+      const result = await convertToAnimeMutation2.mutateAsync({
         photoBase64: base64,
         mimeType,
         element: card2.element,
@@ -131,7 +133,7 @@ export default function Home() {
     } finally {
       setIsGeneratingAI2(false);
     }
-  }, [card2.photoFile, card2.element, updateCard2, convertToAnimeMutation]);
+  }, [card2.photoFile, card2.element, updateCard2, convertToAnimeMutation2]);
 
   const handleDownload = useCallback(async () => {
     setIsDownloading(true);
