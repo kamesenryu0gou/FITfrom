@@ -723,10 +723,28 @@ function LicenseForm({
     }
     setIsGeneratingAI(true);
     try {
-      // base64に変換してAPIに送る
-      const base64 = data.photoUrl.split(",")[1] || data.photoUrl;
-      const mimeMatch = data.photoUrl.match(/data:([^;]+);/);
-      const mimeType = mimeMatch ? mimeMatch[1] : "image/jpeg";
+      // Canvas APIで最大1024pxにリサイズ・JPEG 80%に圧縮してから送信（iPhoneの大容量写真対応）
+      const { base64, mimeType } = await new Promise<{ base64: string; mimeType: string }>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+          const MAX_SIZE = 1024;
+          let { width, height } = img;
+          if (width > MAX_SIZE || height > MAX_SIZE) {
+            if (width > height) { height = Math.round((height * MAX_SIZE) / width); width = MAX_SIZE; }
+            else { width = Math.round((width * MAX_SIZE) / height); height = MAX_SIZE; }
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = width; canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) { reject(new Error("Canvas error")); return; }
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressed = canvas.toDataURL("image/jpeg", 0.8);
+          const [, b64] = compressed.split(",");
+          resolve({ base64: b64, mimeType: "image/jpeg" });
+        };
+        img.onerror = reject;
+        img.src = data.photoUrl!;
+      });
       const result = await convertToCarStyle.mutateAsync({ photoBase64: base64, mimeType });
       onChange({ aiPhotoUrl: result.imageUrl });
       toast.success("AIイラスト生成完了！");

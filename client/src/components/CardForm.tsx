@@ -427,7 +427,7 @@ export default function CardForm({
         {/* AI Anime Button */}
         <button
           onClick={onAIAnime}
-          disabled={isGeneratingAI || !cardData.photoFile}
+          disabled={isGeneratingAI || (!cardData.photoFile && !cardData.photoUrl)}
           style={{
             width: "100%",
             padding: "13px",
@@ -435,19 +435,19 @@ export default function CardForm({
             border: "none",
             fontWeight: 700,
             fontSize: "14px",
-            cursor: isGeneratingAI || !cardData.photoFile ? "not-allowed" : "pointer",
+            cursor: isGeneratingAI || (!cardData.photoFile && !cardData.photoUrl) ? "not-allowed" : "pointer",
             background:
-              isGeneratingAI || !cardData.photoFile
+              isGeneratingAI || (!cardData.photoFile && !cardData.photoUrl)
                 ? "#1e1e2e"
                 : "linear-gradient(135deg, #6a20cc, #9b44ee)",
-            color: isGeneratingAI || !cardData.photoFile ? "#4a4a5a" : "#ffffff",
+            color: isGeneratingAI || (!cardData.photoFile && !cardData.photoUrl) ? "#4a4a5a" : "#ffffff",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             gap: "8px",
             transition: "all 0.15s ease",
             boxShadow:
-              isGeneratingAI || !cardData.photoFile
+              isGeneratingAI || (!cardData.photoFile && !cardData.photoUrl)
                 ? "none"
                 : "0 2px 12px rgba(106,32,204,0.4)",
             fontFamily: "'Noto Sans JP', sans-serif",
@@ -470,7 +470,7 @@ export default function CardForm({
           )}
         </button>
 
-        {!cardData.photoFile && (
+        {!cardData.photoFile && !cardData.photoUrl && (
           <p style={{ color: "#4a4a5a", fontSize: "11px", textAlign: "center", marginTop: "6px" }}>
             ※ 写真をアップロードするとAI変換が使えます
           </p>

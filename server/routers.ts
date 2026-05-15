@@ -281,7 +281,11 @@ async function generateAnimeCharacter(options: {
   let jpegBase64: string;
   try {
     const inputBuffer = Buffer.from(options.photoBase64, "base64");
-    const jpegBuffer = await sharp(inputBuffer).jpeg({ quality: 90 }).toBuffer();
+    // 最大1024pxにリサイズしてJPEGに変換（iPhoneの大容量写真対応）
+    const jpegBuffer = await sharp(inputBuffer)
+      .resize(1024, 1024, { fit: "inside", withoutEnlargement: true })
+      .jpeg({ quality: 85 })
+      .toBuffer();
     jpegBase64 = jpegBuffer.toString("base64");
   } catch {
     // 変換失敗時は元のbase64をそのまま使用
@@ -340,7 +344,11 @@ async function generateLicenseCharacter(options: {
   let jpegBase64: string;
   try {
     const inputBuffer = Buffer.from(options.photoBase64, "base64");
-    const jpegBuffer = await sharp(inputBuffer).jpeg({ quality: 90 }).toBuffer();
+    // 最大1024pxにリサイズしてJPEGに変換（iPhoneの大容量写真対応）
+    const jpegBuffer = await sharp(inputBuffer)
+      .resize(1024, 1024, { fit: "inside", withoutEnlargement: true })
+      .jpeg({ quality: 85 })
+      .toBuffer();
     jpegBase64 = jpegBuffer.toString("base64");
   } catch {
     // 変換失敗時は元のbase64をそのまま使用
