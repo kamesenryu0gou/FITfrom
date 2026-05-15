@@ -189,7 +189,7 @@ export default function Home() {
     toast.info("用紙サイズに合わせた画像を生成中...");
     try {
       await downloadDualCard(card1, card2);
-      toast.success("カードシートをダウンロードしました！「ファイル」または「写真」アプリに保存されます。");
+      toast.success("新しいタブで画像が開きます。画像を長押しして「写真に保存」を選択してください。");
     } catch (error) {
       const msg = error instanceof Error ? error.message : "不明なエラー";
       toast.error(`保存に失敗しました: ${msg}`);

@@ -5,7 +5,9 @@ import { publicProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import sharp from "sharp";
 import { enqueueAiTask, getQueueDepth } from "./aiQueue";
-import { generateImage } from "./_core/imageGeneration";
+import { ENV } from "./_core/env";
+import { storagePut } from "./storage";
+import OpenAI, { toFile } from "openai";
 
 /**
  * AI Anime Conversion — DQ風チビキャラ変換 v4 (Clean Reset)
@@ -277,35 +279,42 @@ async function generateAnimeCharacter(options: {
   const randomKey = CHARACTER_KEYS[Math.floor(Math.random() * CHARACTER_KEYS.length)];
   const prompt = CHARACTER_PROMPTS[randomKey];
 
-  // MPO・HEIC・TIFF など非対応フォーマットをsharpでJPEGに変換してbase64に変換
-  let jpegBase64: string;
+  // MPO・HEIC・TIFF など非対応フォーマットをsharpでJPEGに変換
+  let jpegBuffer: Buffer;
   try {
     const inputBuffer = Buffer.from(options.photoBase64, "base64");
     // 最大1536pxにリサイズしてJPEGに変換（品質優先・顔の特徴を保持）
-    const jpegBuffer = await sharp(inputBuffer)
+    jpegBuffer = await sharp(inputBuffer)
       .resize(1536, 1536, { fit: "inside", withoutEnlargement: true })
       .jpeg({ quality: 95 })
       .toBuffer();
-    jpegBase64 = jpegBuffer.toString("base64");
   } catch {
-    // 変換失敗時は元のbase64をそのまま使用
-    jpegBase64 = options.photoBase64;
+    // 変換失敗時は元のbase64をBufferに変換してそのまま使用
+    jpegBuffer = Buffer.from(options.photoBase64, "base64");
   }
 
-  // Manus組み込みgenerateImageヘルパーを使用（内部ImageService経由）
-  const result = await generateImage({
+  // OpenAI gpt-image-1 を直接呼び出し（最高品質アニメキャラ変換）
+  if (!ENV.openaiApiKey) {
+    throw new Error("OPENAI_API_KEY is not configured");
+  }
+  const openai = new OpenAI({ apiKey: ENV.openaiApiKey });
+  const imageFile = await toFile(jpegBuffer, "photo.jpg", { type: "image/jpeg" });
+  const response = await openai.images.edit({
+    model: "gpt-image-1",
+    image: imageFile,
     prompt,
-    originalImages: [{
-      b64Json: jpegBase64,
-      mimeType: "image/jpeg",
-    }],
+    size: "1024x1024",
   });
 
-  if (!result.url) {
-    throw new Error("AI画像加工に失敗しました。しばらく時間をおいてから再試行してください。");
+  const b64 = response.data?.[0]?.b64_json;
+  if (!b64) {
+    throw new Error("アニメキャラ生成に失敗しました。しばらく時間をおいてから再試行してください。");
   }
 
-  return result.url;
+  // S3に保存してURLを返却
+  const outBuffer = Buffer.from(b64, "base64");
+  const { url } = await storagePut(`generated/anime-${Date.now()}.png`, outBuffer, "image/png");
+  return url;
 }
 
 // ── License Maker: Sugar Rush anime-style character conversion ────────────────────────────────────
@@ -340,35 +349,42 @@ async function generateLicenseCharacter(options: {
   photoBase64: string;
   mimeType: string;
 }): Promise<string> {
-  // MPO・HEIC・TIFF など非対応フォーマットをsharpでJPEGに変換してbase64に変換
-  let jpegBase64: string;
+  // MPO・HEIC・TIFF など非対応フォーマットをsharpでJPEGに変換
+  let jpegBuffer: Buffer;
   try {
     const inputBuffer = Buffer.from(options.photoBase64, "base64");
     // 最大1536pxにリサイズしてJPEGに変換（品質優先・顔の特徴を保持）
-    const jpegBuffer = await sharp(inputBuffer)
+    jpegBuffer = await sharp(inputBuffer)
       .resize(1536, 1536, { fit: "inside", withoutEnlargement: true })
       .jpeg({ quality: 95 })
       .toBuffer();
-    jpegBase64 = jpegBuffer.toString("base64");
   } catch {
-    // 変換失敗時は元のbase64をそのまま使用
-    jpegBase64 = options.photoBase64;
+    // 変換失敗時は元のbase64をBufferに変換してそのまま使用
+    jpegBuffer = Buffer.from(options.photoBase64, "base64");
   }
 
-  // Manus組み込みgenerateImageヘルパーを使用（内部ImageService経由）
-  const result = await generateImage({
+  // OpenAI gpt-image-1 を直接呼び出し（最高品質3Dアニメ変換）
+  if (!ENV.openaiApiKey) {
+    throw new Error("OPENAI_API_KEY is not configured");
+  }
+  const openai = new OpenAI({ apiKey: ENV.openaiApiKey });
+  const imageFile = await toFile(jpegBuffer, "photo.jpg", { type: "image/jpeg" });
+  const response = await openai.images.edit({
+    model: "gpt-image-1",
+    image: imageFile,
     prompt: LICENSE_CARS_PROMPT,
-    originalImages: [{
-      b64Json: jpegBase64,
-      mimeType: "image/jpeg",
-    }],
+    size: "1024x1024",
   });
 
-  if (!result.url) {
-    throw new Error("AI画像加工に失敗しました。しばらく時間をおいてから再試行してください。");
+  const b64 = response.data?.[0]?.b64_json;
+  if (!b64) {
+    throw new Error("免許キャラ生成に失敗しました。しばらく時間をおいてから再試行してください。");
   }
 
-  return result.url;
+  // S3に保存してURLを返却
+  const outBuffer = Buffer.from(b64, "base64");
+  const { url } = await storagePut(`generated/license-${Date.now()}.png`, outBuffer, "image/png");
+  return url;
 }
 
 export const appRouter = router({

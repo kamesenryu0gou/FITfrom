@@ -528,25 +528,39 @@ export async function downloadDualCard(card1: CardData, card2: CardData): Promis
     );
   });
 
-  const filename = "fitwars-card-sheet.jpg";
-
-  // iOS Safari: Web Share APIで写真アプリに直接保存できる
-  // Android/PC: <a download> でダウンロード
-  if (
-    typeof navigator !== "undefined" &&
-    navigator.share &&
-    navigator.canShare &&
-    navigator.canShare({ files: [new File([blob], filename, { type: "image/jpeg" })] })
-  ) {
-    // Web Share API対応（iOS Safari、一部Android）→共有シートから写真に保存可能
-    const file = new File([blob], filename, { type: "image/jpeg" });
-    await navigator.share({ files: [file], title: "FIT WARS カード" });
+  // 全デバイス共通: 新しいタブで画像を表示→長押しで写真アプリに保存
+  const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
+  const newTab = window.open("", "_blank");
+  if (newTab) {
+    newTab.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>FIT WARS カードを保存</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { background: #111; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+          .msg { color: #fff; font-size: 18px; font-weight: bold; margin-bottom: 16px; text-align: center; line-height: 1.6; }
+          .sub { color: #aaa; font-size: 14px; margin-bottom: 24px; text-align: center; }
+          img { max-width: 100%; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+        </style>
+      </head>
+      <body>
+        <p class="msg">カード画像を長押しして「写真に保存」を選択</p>
+        <p class="sub">(iOS: 長押し → 「写真に保存」 / Android: 長押し → 「画像を保存」)</p>
+        <img src="${dataUrl}" alt="FIT WARS カード" />
+      </body>
+      </html>
+    `);
+    newTab.document.close();
   } else {
-    // フォールバック: <a download>（PC・Android Chrome）
+    // ポップアップブロック時のフォールバック: ダウンロード
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = filename;
+    a.download = "fitwars-card-sheet.jpg";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
