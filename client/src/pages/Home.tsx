@@ -50,6 +50,10 @@ export default function Home() {
   const [isGeneratingAI2, setIsGeneratingAI2] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const convertToAnimeMutation = trpc.card.convertToAnime.useMutation();
+  const { data: queueStatus } = trpc.ai.queueStatus.useQuery(undefined, {
+    refetchInterval: (isGeneratingAI1 || isGeneratingAI2) ? 2000 : false,
+  });
+  const queueWaiting = queueStatus?.waiting ?? 0;
 
   const updateCard1 = useCallback((updates: Partial<CardData>) => {
     setCard1((prev) => ({ ...prev, ...updates }));
@@ -332,6 +336,7 @@ export default function Home() {
             updateCardData={updateCard1}
             onAIAnime={handleAIAnime1}
             isGeneratingAI={isGeneratingAI1}
+            queueWaiting={queueWaiting}
             hideDownload
           />
         </div>
@@ -392,6 +397,7 @@ export default function Home() {
             updateCardData={updateCard2}
             onAIAnime={handleAIAnime2}
             isGeneratingAI={isGeneratingAI2}
+            queueWaiting={queueWaiting}
             hideDownload
           />
         </div>

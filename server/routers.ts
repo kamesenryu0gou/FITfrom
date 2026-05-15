@@ -268,6 +268,39 @@ const CHARACTER_PROMPTS: Record<string, string> = {
 
 const CHARACTER_KEYS = Object.keys(CHARACTER_PROMPTS);
 
+// ── AIキュー管理 ──────────────────────────────────────────────────────────
+// gpt-image-1 の高品質処理を安定させるため同時処理数を 2 に制限する
+const AI_CONCURRENCY = 2;
+let aiActiveCount = 0;
+let aiQueueLength = 0;
+const aiQueue: Array<() => void> = [];
+
+/** キューに入れて順番に実行する。戻り値は処理結果の Promise */
+function enqueueAiTask<T>(task: () => Promise<T>): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    aiQueueLength++;
+    const run = () => {
+      aiQueueLength = Math.max(0, aiQueueLength - 1);
+      aiActiveCount++;
+      task()
+        .then(resolve)
+        .catch(reject)
+        .finally(() => {
+          aiActiveCount--;
+          if (aiQueue.length > 0) {
+            const next = aiQueue.shift()!;
+            next();
+          }
+        });
+    };
+    if (aiActiveCount < AI_CONCURRENCY) {
+      run();
+    } else {
+      aiQueue.push(run);
+    }
+  });
+}
+
 async function generateAnimeCharacter(options: {
   photoBase64: string;
   mimeType: string;
@@ -433,6 +466,17 @@ export const appRouter = router({
     }),
   }),
 
+  ai: router({
+    /** 現在のキュー状態を返す（待ち人数・処理中人数） */
+    queueStatus: publicProcedure.query(() => {
+      return {
+        waiting: aiQueueLength,
+        active: aiActiveCount,
+        total: aiQueueLength + aiActiveCount,
+      };
+    }),
+  }),
+
   license: router({
     convertToCarStyle: publicProcedure
       .input(
@@ -442,10 +486,12 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
-        const imageUrl = await generateLicenseCharacter({
-          photoBase64: input.photoBase64,
-          mimeType: input.mimeType,
-        });
+        const imageUrl = await enqueueAiTask(() =>
+          generateLicenseCharacter({
+            photoBase64: input.photoBase64,
+            mimeType: input.mimeType,
+          })
+        );
         return { imageUrl };
       }),
   }),
@@ -460,11 +506,13 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
-        const imageUrl = await generateAnimeCharacter({
-          photoBase64: input.photoBase64,
-          mimeType: input.mimeType,
-          element: input.element,
-        });
+        const imageUrl = await enqueueAiTask(() =>
+          generateAnimeCharacter({
+            photoBase64: input.photoBase64,
+            mimeType: input.mimeType,
+            element: input.element,
+          })
+        );
         return { imageUrl };
       }),
   }),

@@ -295,7 +295,7 @@ function LicenseCardPreview({ data }: { data: LicenseData }) {
             style={{
               width: "100%",
               height: "100%",
-              objectFit: "contain",
+              objectFit: "cover",
               objectPosition: "center top",
               display: "block",
             }}
@@ -696,6 +696,10 @@ function LicenseForm({
   const [cropSrc, setCropSrc] = useState<string | null>(null);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const convertToCarStyle = trpc.license.convertToCarStyle.useMutation();
+  const { data: queueStatus } = trpc.ai.queueStatus.useQuery(undefined, {
+    refetchInterval: isGeneratingAI ? 2000 : false,
+  });
+  const queueWaiting = queueStatus?.waiting ?? 0;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -875,7 +879,11 @@ function LicenseForm({
                 boxShadow: isGeneratingAI ? "none" : "0 4px 0 #004bb5",
               }}
             >
-              {isGeneratingAI ? "生成中..." : "AIイラスト化"}
+              {isGeneratingAI
+        ? queueWaiting > 0
+          ? `AI加工待機中... ${queueWaiting}人待ち`
+          : "AI加工中..."
+        : "AIイラスト化"}
             </button>
           )}
         </div>
@@ -886,8 +894,12 @@ function LicenseForm({
               alt="preview"
               style={{ width: "60px", height: "80px", objectFit: "cover", borderRadius: "8px", border: "2px solid rgba(255,255,255,0.3)" }}
             />
-            <span style={{ fontSize: "12px", color: "#d63384", fontFamily: "'M PLUS Rounded 1c', sans-serif", fontWeight: 700 }}>
-              {data.aiPhotoUrl ? "AIイラスト使用中" : "写真選択済み"}
+            <span style={{ fontSize: "12px", color: isGeneratingAI ? "#ff6b35" : "#d63384", fontFamily: "'M PLUS Rounded 1c', sans-serif", fontWeight: 700 }}>
+              {isGeneratingAI
+                ? queueWaiting > 0
+                  ? `✨ AI加工待機中... あなたの前に${queueWaiting}人待ちです`
+                  : "✨ AI加工中... しばらくお待ちください"
+                : data.aiPhotoUrl ? "AIイラスト使用中" : "写真選択済み"}
             </span>
           </div>
         )}

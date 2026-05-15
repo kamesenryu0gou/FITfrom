@@ -58,6 +58,11 @@ async function startServer() {
     console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
   }
 
+  // AI画像生成は 30【90秒かかるため、タイムアウトを 120 秒に設定する
+  server.keepAliveTimeout = 120_000;
+  server.headersTimeout = 125_000;
+  server.setTimeout(120_000);
+
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
   });
