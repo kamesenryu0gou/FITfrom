@@ -279,46 +279,35 @@ async function generateAnimeCharacter(options: {
   const randomKey = CHARACTER_KEYS[Math.floor(Math.random() * CHARACTER_KEYS.length)];
   const prompt = CHARACTER_PROMPTS[randomKey];
 
-  // gpt-image-1 の images/edits エンドポイントを使用して写真を直接参照
-  // 新しい JSON 形式（images 配列 + image_url に base64 データ URL）で送信
-
   // MPO・HEIC・TIFF など非対応フォーマットをsharpでJPEGに変換する
-  // （MPOはJPEGヘッダーを持つが複数画像を含む特殊フォーマットでOpenAI APIが拒否する）
-  let safeBase64 = options.photoBase64;
-  let safeMimeType = "image/jpeg";
+  let jpegBuffer: Buffer;
   try {
     const inputBuffer = Buffer.from(options.photoBase64, "base64");
-    const jpegBuffer = await sharp(inputBuffer)
-      .jpeg({ quality: 90 })
-      .toBuffer();
-    safeBase64 = jpegBuffer.toString("base64");
-    safeMimeType = "image/jpeg";
-  } catch (convErr) {
-    // 変換失敗時は元のデータをそのまま使用（JPEG/PNG/WEBPは通常変換不要）
-    const mimeType = options.mimeType || "image/jpeg";
-    safeMimeType = ["image/jpeg", "image/png", "image/webp"].includes(mimeType)
-      ? mimeType
-      : "image/jpeg";
-    safeBase64 = options.photoBase64;
+    jpegBuffer = await sharp(inputBuffer).jpeg({ quality: 90 }).toBuffer();
+  } catch {
+    // 変換失敗時は元のbase64をJPEGバッファとして使用
+    jpegBuffer = Buffer.from(options.photoBase64, "base64");
   }
 
-  // base64 データ URL 形式に変換
-  const dataUrl = `data:${safeMimeType};base64,${safeBase64}`;
+  // multipart/form-data 形式で送信（images/edits エンドポイントの正式仕様）
+  const formData = new FormData();
+  // Buffer→ArrayBuffer変換でTypeScript型エラーを回避
+  const imageArrayBuffer = jpegBuffer.buffer.slice(jpegBuffer.byteOffset, jpegBuffer.byteOffset + jpegBuffer.byteLength) as ArrayBuffer;
+  const imageBlob = new Blob([imageArrayBuffer], { type: "image/jpeg" });
+  formData.append("image[]", imageBlob, "photo.jpg");
+  formData.append("model", "gpt-image-1");
+  formData.append("prompt", prompt);
+  formData.append("n", "1");
+  formData.append("size", "1024x1024");
+  formData.append("quality", "high");
 
   const editResponse = await fetch("https://api.openai.com/v1/images/edits", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
+      // Content-Type は FormData が自動設定するため指定しない
     },
-    body: JSON.stringify({
-      model: "gpt-image-1",
-      prompt,
-      images: [{ image_url: dataUrl }],
-      n: 1,
-      size: "1024x1024",
-      quality: "high",
-    }),
+    body: formData,
   });
 
   if (!editResponse.ok) {
@@ -339,7 +328,6 @@ async function generateAnimeCharacter(options: {
     );
     return url;
   } else if (imageUrl) {
-    // URLが返ってきた場合はダウンロードしてストレージに保存
     const imgRes = await fetch(imageUrl);
     if (!imgRes.ok) throw new Error("Failed to download generated image");
     const imgBuffer = Buffer.from(await imgRes.arrayBuffer());
@@ -389,32 +377,33 @@ async function generateLicenseCharacter(options: {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not configured");
 
-  let safeBase64 = options.photoBase64;
-  let safeMimeType = "image/jpeg";
+  // MPO・HEIC・TIFF など非対応フォーマットをsharpでJPEGに変換する
+  let jpegBuffer: Buffer;
   try {
     const inputBuffer = Buffer.from(options.photoBase64, "base64");
-    const jpegBuffer = await sharp(inputBuffer).jpeg({ quality: 90 }).toBuffer();
-    safeBase64 = jpegBuffer.toString("base64");
-    safeMimeType = "image/jpeg";
+    jpegBuffer = await sharp(inputBuffer).jpeg({ quality: 90 }).toBuffer();
   } catch {
-    const mimeType = options.mimeType || "image/jpeg";
-    safeMimeType = ["image/jpeg", "image/png", "image/webp"].includes(mimeType) ? mimeType : "image/jpeg";
-    safeBase64 = options.photoBase64;
+    jpegBuffer = Buffer.from(options.photoBase64, "base64");
   }
 
-  const dataUrl = `data:${safeMimeType};base64,${safeBase64}`;
+  // multipart/form-data 形式で送信（images/edits エンドポイントの正式仕様）
+  const formData = new FormData();
+  const imageArrayBuffer = jpegBuffer.buffer.slice(jpegBuffer.byteOffset, jpegBuffer.byteOffset + jpegBuffer.byteLength) as ArrayBuffer;
+  const imageBlob = new Blob([imageArrayBuffer], { type: "image/jpeg" });
+  formData.append("image[]", imageBlob, "photo.jpg");
+  formData.append("model", "gpt-image-1");
+  formData.append("prompt", LICENSE_CARS_PROMPT);
+  formData.append("n", "1");
+  formData.append("size", "1024x1024");
+  formData.append("quality", "high");
 
   const editResponse = await fetch("https://api.openai.com/v1/images/edits", {
     method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "gpt-image-1",
-      prompt: LICENSE_CARS_PROMPT,
-      images: [{ image_url: dataUrl }],
-      n: 1,
-      size: "1024x1024",
-      quality: "high",
-    }),
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      // Content-Type は FormData が自動設定するため指定しない
+    },
+    body: formData,
   });
 
   if (!editResponse.ok) {
