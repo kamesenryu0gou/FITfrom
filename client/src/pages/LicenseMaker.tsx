@@ -562,18 +562,16 @@ async function renderLicenseCardOnCanvas(
       ctx.beginPath();
       ctx.rect(PHOTO_L, PHOTO_Y1, photoW, photoH);
       ctx.clip();
-      // object-contain + 上寄せ: 胴体より上が枚内に収まるように表示
+      // object-cover + object-top
       const pa = photoImg.width / photoImg.height;
       const ba = photoW / photoH;
       let dw: number, dh: number, dx: number, dy: number;
       if (pa > ba) {
-        // 横長写真 → 幅に合わせて上寄せ
+        dh = photoH; dw = dh * pa;
+        dx = PHOTO_L - (dw - photoW) / 2; dy = PHOTO_Y1;
+      } else {
         dw = photoW; dh = dw / pa;
         dx = PHOTO_L; dy = PHOTO_Y1;
-      } else {
-        // 縦長写真 → 高さに合わせて横中央（上寄せ）
-        dh = photoH; dw = dh * pa;
-        dx = PHOTO_L + (photoW - dw) / 2; dy = PHOTO_Y1;
       }
       ctx.drawImage(photoImg, dx, dy, dw, dh);
       ctx.restore();
