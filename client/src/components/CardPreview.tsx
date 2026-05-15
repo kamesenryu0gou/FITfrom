@@ -102,7 +102,7 @@ export default function CardPreview({ cardData }: CardPreviewProps) {
           <img
             src={photoUrl}
             alt="キャラクター"
-            className="w-full h-full object-cover object-top"
+            className="w-full h-full object-contain object-center"
             crossOrigin="anonymous"
           />
         </div>

@@ -295,7 +295,7 @@ function LicenseCardPreview({ data }: { data: LicenseData }) {
             style={{
               width: "100%",
               height: "100%",
-              objectFit: "cover",
+              objectFit: "contain",
               objectPosition: "center top",
               display: "block",
             }}
@@ -562,16 +562,18 @@ async function renderLicenseCardOnCanvas(
       ctx.beginPath();
       ctx.rect(PHOTO_L, PHOTO_Y1, photoW, photoH);
       ctx.clip();
-      // object-cover + object-top
+      // object-contain + 上寄せ: 胴体より上が枚内に収まるように表示
       const pa = photoImg.width / photoImg.height;
       const ba = photoW / photoH;
       let dw: number, dh: number, dx: number, dy: number;
       if (pa > ba) {
-        dh = photoH; dw = dh * pa;
-        dx = PHOTO_L - (dw - photoW) / 2; dy = PHOTO_Y1;
-      } else {
+        // 横長写真 → 幅に合わせて上寄せ
         dw = photoW; dh = dw / pa;
         dx = PHOTO_L; dy = PHOTO_Y1;
+      } else {
+        // 縦長写真 → 高さに合わせて横中央（上寄せ）
+        dh = photoH; dw = dh * pa;
+        dx = PHOTO_L + (photoW - dw) / 2; dy = PHOTO_Y1;
       }
       ctx.drawImage(photoImg, dx, dy, dw, dh);
       ctx.restore();

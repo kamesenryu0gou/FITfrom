@@ -93,3 +93,5 @@
 - [ ] ドメイン外れ問題：fitform.makefrom1.comからページ遷移時にドメインが変わる問題を調査・修正
 - [x] iPhone Chrome AI加工100%失敗：送信前にCanvas APIで画像リサイズ・圧縮（最大1024px、JPEG 80%）を実装してiPhoneの大容量写真問題を解消- [x] FIT WARS：ダウンロードボタンで全デバイス統一（iOS/Android/PC問わたia.download方式でJPEG保存）、長押し保存廃止
 - [x] 免許メーカー：ダウンロードボタンで全デバイス統一（iOS/Android/PC問わたia.download方式でJPEG保存）、長押し保存廃止- [x] 写真アップロード時に全デバイス共通でCanvas圧縮（最大1024px・JPEG 80%）を適用（FIT WARS・免許メーカー両方）
+- [x] FIT WARS：AI生成キャラ劃像をカード写真枚に全身（頭から足まで）収まるよう描画方式を修正（object-contain中央配置）
+- [x] 免許メーカー：AI生成キャラ劃像を胴体より上が収まるよう描画方式を修正（object-contain上寄せ）

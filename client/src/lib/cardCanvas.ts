@@ -118,22 +118,22 @@ export async function renderCardToBlob(cardData: CardData, scale = 3): Promise<B
       ctx.rect(BAR_LEFT, PHOTO_TOP, BAR_WIDTH, PHOTO_HEIGHT);
       ctx.clip();
 
-      // object-cover + object-top (same as CSS in CardPreview)
+      // object-contain + object-center: 全身が枚内に収まるようにレターボックス表示
       const photoAspect = photoImg.width / photoImg.height;
       const boxAspect   = BAR_WIDTH / PHOTO_HEIGHT;
       let dw: number, dh: number, dx: number, dy: number;
 
       if (photoAspect > boxAspect) {
-        // Photo is wider → fit height, center horizontally
-        dh = PHOTO_HEIGHT;
-        dw = PHOTO_HEIGHT * photoAspect;
-        dx = BAR_LEFT - (dw - BAR_WIDTH) / 2;
-        dy = PHOTO_TOP;
-      } else {
-        // Photo is taller → fit width, align to top (object-top)
+        // 写真が横長 → 幅に合わせて縦中央
         dw = BAR_WIDTH;
         dh = BAR_WIDTH / photoAspect;
         dx = BAR_LEFT;
+        dy = PHOTO_TOP + (PHOTO_HEIGHT - dh) / 2;
+      } else {
+        // 写真が縦長 → 高さに合わせて横中央（全身が収まる）
+        dh = PHOTO_HEIGHT;
+        dw = PHOTO_HEIGHT * photoAspect;
+        dx = BAR_LEFT + (BAR_WIDTH - dw) / 2;
         dy = PHOTO_TOP;
       }
 
@@ -393,19 +393,22 @@ async function renderCardForSheet(
       tmpCtx.rect(BAR_LEFT, PHOTO_TOP, BAR_WIDTH, PHOTO_HEIGHT);
       tmpCtx.clip();
 
+      // object-contain + object-center: 全身が枚内に収まるようにレターボックス表示
       const photoAspect = photoImg.width / photoImg.height;
       const boxAspect   = BAR_WIDTH / PHOTO_HEIGHT;
       let dw: number, dh: number, dx: number, dy: number;
 
       if (photoAspect > boxAspect) {
-        dh = PHOTO_HEIGHT;
-        dw = PHOTO_HEIGHT * photoAspect;
-        dx = BAR_LEFT - (dw - BAR_WIDTH) / 2;
-        dy = PHOTO_TOP;
-      } else {
+        // 写真が横長 → 幅に合わせて縦中央
         dw = BAR_WIDTH;
         dh = BAR_WIDTH / photoAspect;
         dx = BAR_LEFT;
+        dy = PHOTO_TOP + (PHOTO_HEIGHT - dh) / 2;
+      } else {
+        // 写真が縦長 → 高さに合わせて横中央（全身が収まる）
+        dh = PHOTO_HEIGHT;
+        dw = PHOTO_HEIGHT * photoAspect;
+        dx = BAR_LEFT + (BAR_WIDTH - dw) / 2;
         dy = PHOTO_TOP;
       }
       tmpCtx.drawImage(photoImg, dx, dy, dw, dh);
