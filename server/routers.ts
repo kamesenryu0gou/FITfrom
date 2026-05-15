@@ -3,11 +3,9 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { z } from "zod";
-import sharp from "sharp";
-import { enqueueAiTask, getQueueDepth } from "./aiQueue";
-import { ENV } from "./_core/env";
 import { storagePut } from "./storage";
-import OpenAI, { toFile } from "openai";
+import sharp from "sharp";
+import { toFile } from "openai";
 
 /**
  * AI Anime Conversion — DQ風チビキャラ変換 v4 (Clean Reset)
@@ -275,46 +273,65 @@ async function generateAnimeCharacter(options: {
   mimeType: string;
   element: string;
 }): Promise<string> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error("OPENAI_API_KEY is not configured");
+
   // ランダムに職業を選択
   const randomKey = CHARACTER_KEYS[Math.floor(Math.random() * CHARACTER_KEYS.length)];
   const prompt = CHARACTER_PROMPTS[randomKey];
 
-  // MPO・HEIC・TIFF など非対応フォーマットをsharpでJPEGに変換
+  // MPO・HEIC・TIFF など非対応フォーマットをsharpでJPEGに変換（最大1536px・JPEG 95%・顔の特徴保持）
   let jpegBuffer: Buffer;
   try {
     const inputBuffer = Buffer.from(options.photoBase64, "base64");
-    // 最大1536pxにリサイズしてJPEGに変換（品質優先・顔の特徴を保持）
     jpegBuffer = await sharp(inputBuffer)
       .resize(1536, 1536, { fit: "inside", withoutEnlargement: true })
       .jpeg({ quality: 95 })
       .toBuffer();
   } catch {
-    // 変換失敗時は元のbase64をBufferに変換してそのまま使用
     jpegBuffer = Buffer.from(options.photoBase64, "base64");
   }
 
-  // OpenAI gpt-image-1 を直接呼び出し（最高品質アニメキャラ変換）
-  if (!ENV.openaiApiKey) {
-    throw new Error("OPENAI_API_KEY is not configured");
-  }
-  const openai = new OpenAI({ apiKey: ENV.openaiApiKey });
+  // gpt-image-1 の images/edits エンドポイントは multipart/form-data 形式のみ対応
+  // toFile で File オブジェクトに変換して FormData に追加する
   const imageFile = await toFile(jpegBuffer, "photo.jpg", { type: "image/jpeg" });
-  const response = await openai.images.edit({
-    model: "gpt-image-1",
-    image: imageFile,
-    prompt,
-    size: "1024x1024",
+
+  const formData = new FormData();
+  formData.append("model", "gpt-image-1");
+  formData.append("prompt", prompt);
+  formData.append("image", imageFile as unknown as Blob);
+  formData.append("n", "1");
+  formData.append("size", "1024x1024");
+  formData.append("quality", "high");
+
+  const editResponse = await fetch("https://api.openai.com/v1/images/edits", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: formData,
   });
 
-  const b64 = response.data?.[0]?.b64_json;
-  if (!b64) {
-    throw new Error("アニメキャラ生成に失敗しました。しばらく時間をおいてから再試行してください。");
+  if (!editResponse.ok) {
+    const err = await editResponse.json().catch(() => ({})) as { error?: { message?: string } };
+    throw new Error(`gpt-image-1 edit error: ${err?.error?.message || editResponse.status}`);
   }
 
-  // S3に保存してURLを返却
-  const outBuffer = Buffer.from(b64, "base64");
-  const { url } = await storagePut(`generated/anime-${Date.now()}.png`, outBuffer, "image/png");
-  return url;
+  const editData = await editResponse.json() as { data?: Array<{ b64_json?: string; url?: string }> };
+  const b64 = editData.data?.[0]?.b64_json;
+  const imageUrl = editData.data?.[0]?.url;
+
+  if (b64) {
+    const buffer = Buffer.from(b64, "base64");
+    const { url } = await storagePut(`anime-converted/${Date.now()}.png`, buffer, "image/png");
+    return url;
+  } else if (imageUrl) {
+    const imgRes = await fetch(imageUrl);
+    if (!imgRes.ok) throw new Error("Failed to download generated image");
+    const imgBuffer = Buffer.from(await imgRes.arrayBuffer());
+    const { url } = await storagePut(`anime-converted/${Date.now()}.png`, imgBuffer, "image/png");
+    return url;
+  }
+
+  throw new Error("No image data returned from gpt-image-1");
 }
 
 // ── License Maker: Sugar Rush anime-style character conversion ────────────────────────────────────
@@ -349,42 +366,60 @@ async function generateLicenseCharacter(options: {
   photoBase64: string;
   mimeType: string;
 }): Promise<string> {
-  // MPO・HEIC・TIFF など非対応フォーマットをsharpでJPEGに変換
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error("OPENAI_API_KEY is not configured");
+
+  // MPO・HEIC・TIFF など非対応フォーマットをsharpでJPEGに変換（最大1536px・JPEG 95%・顔の特徴保持）
   let jpegBuffer: Buffer;
   try {
     const inputBuffer = Buffer.from(options.photoBase64, "base64");
-    // 最大1536pxにリサイズしてJPEGに変換（品質優先・顔の特徴を保持）
     jpegBuffer = await sharp(inputBuffer)
       .resize(1536, 1536, { fit: "inside", withoutEnlargement: true })
       .jpeg({ quality: 95 })
       .toBuffer();
   } catch {
-    // 変換失敗時は元のbase64をBufferに変換してそのまま使用
     jpegBuffer = Buffer.from(options.photoBase64, "base64");
   }
 
-  // OpenAI gpt-image-1 を直接呼び出し（最高品質3Dアニメ変換）
-  if (!ENV.openaiApiKey) {
-    throw new Error("OPENAI_API_KEY is not configured");
-  }
-  const openai = new OpenAI({ apiKey: ENV.openaiApiKey });
+  // gpt-image-1 の images/edits エンドポイントは multipart/form-data 形式のみ対応
   const imageFile = await toFile(jpegBuffer, "photo.jpg", { type: "image/jpeg" });
-  const response = await openai.images.edit({
-    model: "gpt-image-1",
-    image: imageFile,
-    prompt: LICENSE_CARS_PROMPT,
-    size: "1024x1024",
+
+  const formData = new FormData();
+  formData.append("model", "gpt-image-1");
+  formData.append("prompt", LICENSE_CARS_PROMPT);
+  formData.append("image", imageFile as unknown as Blob);
+  formData.append("n", "1");
+  formData.append("size", "1024x1024");
+  formData.append("quality", "high");
+
+  const editResponse = await fetch("https://api.openai.com/v1/images/edits", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: formData,
   });
 
-  const b64 = response.data?.[0]?.b64_json;
-  if (!b64) {
-    throw new Error("免許キャラ生成に失敗しました。しばらく時間をおいてから再試行してください。");
+  if (!editResponse.ok) {
+    const err = await editResponse.json().catch(() => ({})) as { error?: { message?: string } };
+    throw new Error(`gpt-image-1 edit error: ${err?.error?.message || editResponse.status}`);
   }
 
-  // S3に保存してURLを返却
-  const outBuffer = Buffer.from(b64, "base64");
-  const { url } = await storagePut(`generated/license-${Date.now()}.png`, outBuffer, "image/png");
-  return url;
+  const editData = await editResponse.json() as { data?: Array<{ b64_json?: string; url?: string }> };
+  const b64 = editData.data?.[0]?.b64_json;
+  const imageUrl = editData.data?.[0]?.url;
+
+  if (b64) {
+    const buffer = Buffer.from(b64, "base64");
+    const { url } = await storagePut(`license-converted/${Date.now()}.png`, buffer, "image/png");
+    return url;
+  } else if (imageUrl) {
+    const imgRes = await fetch(imageUrl);
+    if (!imgRes.ok) throw new Error("Failed to download generated image");
+    const imgBuffer = Buffer.from(await imgRes.arrayBuffer());
+    const { url } = await storagePut(`license-converted/${Date.now()}.png`, imgBuffer, "image/png");
+    return url;
+  }
+
+  throw new Error("No image data returned from gpt-image-1");
 }
 
 export const appRouter = router({
@@ -399,9 +434,6 @@ export const appRouter = router({
   }),
 
   license: router({
-    // キュー待機人数を返すクエリ（フロントエンドのポーリング用）
-    queueDepth: publicProcedure.query(() => ({ depth: getQueueDepth() })),
-
     convertToCarStyle: publicProcedure
       .input(
         z.object({
@@ -410,21 +442,15 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
-        // キューに追加して直列処理（複数人同時利用でもレート制限を回避）
-        const imageUrl = await enqueueAiTask(() =>
-          generateLicenseCharacter({
-            photoBase64: input.photoBase64,
-            mimeType: input.mimeType,
-          })
-        );
+        const imageUrl = await generateLicenseCharacter({
+          photoBase64: input.photoBase64,
+          mimeType: input.mimeType,
+        });
         return { imageUrl };
       }),
   }),
 
   card: router({
-    // キュー待機人数を返すクエリ（フロントエンドのポーリング用）
-    queueDepth: publicProcedure.query(() => ({ depth: getQueueDepth() })),
-
     convertToAnime: publicProcedure
       .input(
         z.object({
@@ -434,14 +460,11 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
-        // キューに追加して直列処理（複数人同時利用でもレート制限を回避）
-        const imageUrl = await enqueueAiTask(() =>
-          generateAnimeCharacter({
-            photoBase64: input.photoBase64,
-            mimeType: input.mimeType,
-            element: input.element,
-          })
-        );
+        const imageUrl = await generateAnimeCharacter({
+          photoBase64: input.photoBase64,
+          mimeType: input.mimeType,
+          element: input.element,
+        });
         return { imageUrl };
       }),
   }),

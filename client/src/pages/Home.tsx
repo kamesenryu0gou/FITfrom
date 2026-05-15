@@ -7,7 +7,7 @@
  * - ダウンロードボタンは最下部に1つのみ
  */
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import CardPreview from "@/components/CardPreview";
@@ -49,19 +49,7 @@ export default function Home() {
   const [isGeneratingAI1, setIsGeneratingAI1] = useState(false);
   const [isGeneratingAI2, setIsGeneratingAI2] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [queueWaiting, setQueueWaiting] = useState(0); // 待機人数
-
   const convertToAnimeMutation = trpc.card.convertToAnime.useMutation();
-
-  // AI加工中はキュー待機人数をポーリングして表示する
-  const isGeneratingAI = isGeneratingAI1 || isGeneratingAI2;
-  const { data: queueData } = trpc.card.queueDepth.useQuery(undefined, {
-    refetchInterval: isGeneratingAI ? 3000 : false,
-    enabled: isGeneratingAI,
-  });
-  useEffect(() => {
-    setQueueWaiting(queueData?.depth ?? 0);
-  }, [queueData]);
 
   const updateCard1 = useCallback((updates: Partial<CardData>) => {
     setCard1((prev) => ({ ...prev, ...updates }));
@@ -71,72 +59,29 @@ export default function Home() {
     setCard2((prev) => ({ ...prev, ...updates }));
   }, []);
 
-  // Canvas APIで画像を最大1536pxにリサイズし、JPEG 95%に圧縮してbase64を返す
-  // 品質優先：顔の特徴を保持しつつiPhoneの大容量写真に対応する
-  const compressImageToBase64 = useCallback((dataUrl: string): Promise<{ base64: string; mimeType: string }> => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        const MAX_SIZE = 1536;
-        let { width, height } = img;
-        if (width > MAX_SIZE || height > MAX_SIZE) {
-          if (width > height) {
-            height = Math.round((height * MAX_SIZE) / width);
-            width = MAX_SIZE;
-          } else {
-            width = Math.round((width * MAX_SIZE) / height);
-            height = MAX_SIZE;
-          }
-        }
-        const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) { reject(new Error("Canvasを作成できませんでした")); return; }
-        ctx.drawImage(img, 0, 0, width, height);
-        const compressed = canvas.toDataURL("image/jpeg", 0.95);
-        const [, base64] = compressed.split(",");
-        resolve({ base64, mimeType: "image/jpeg" });
-      };
-      img.onerror = reject;
-      img.src = dataUrl;
-    });
-  }, []);
-
-  // FileからdataURLを読み込む
-  const fileToDataUrl = (file: File): Promise<string> => {
+  const fileToBase64 = (file: File): Promise<{ base64: string; mimeType: string }> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
+      reader.onload = () => {
+        const result = reader.result as string;
+        const [header, base64] = result.split(",");
+        const mimeType = header.match(/data:([^;]+)/)?.[1] || "image/jpeg";
+        resolve({ base64, mimeType });
+      };
       reader.onerror = reject;
       reader.readAsDataURL(file);
     });
   };
 
-  // photoUrl（トリミング済みdata URL）またはphotoFileから圧縮済みbase64を取得する
-  // トリミング後はphotoUrlがdata URL形式になるため、こちらを優先する
-  const getPhotoBase64 = useCallback(async (card: CardData): Promise<{ base64: string; mimeType: string }> => {
-    if (card.photoUrl && card.photoUrl.startsWith("data:")) {
-      // トリミング済みdata URL → Canvasで圧縮して送信
-      return compressImageToBase64(card.photoUrl);
-    }
-    if (card.photoFile) {
-      // ファイル → dataURL → Canvasで圧縮
-      const dataUrl = await fileToDataUrl(card.photoFile);
-      return compressImageToBase64(dataUrl);
-    }
-    throw new Error("写真が選択されていません");
-  }, [compressImageToBase64]);
-
   const handleAIAnime1 = useCallback(async () => {
-    if (!card1.photoUrl && !card1.photoFile) {
+    if (!card1.photoFile) {
       toast.error("1枚目の写真をアップロードしてください");
       return;
     }
     setIsGeneratingAI1(true);
     toast.info("1枚目：AIがDQ風チビキャラに変換中... 30～60秒ほどお待ちください");
     try {
-      const { base64, mimeType } = await getPhotoBase64(card1);
+      const { base64, mimeType } = await fileToBase64(card1.photoFile);
       const result = await convertToAnimeMutation.mutateAsync({
         photoBase64: base64,
         mimeType,
@@ -149,22 +94,22 @@ export default function Home() {
         throw new Error("画像URLが取得できませんでした");
       }
     } catch (error) {
-      const msg = error instanceof Error ? error.message : "不明なアラー";
+      const msg = error instanceof Error ? error.message : "不明なエラー";
       toast.error(`1枚目の変換に失敗しました: ${msg}`);
     } finally {
       setIsGeneratingAI1(false);
     }
-  }, [card1, updateCard1, convertToAnimeMutation, getPhotoBase64]);
+  }, [card1.photoFile, card1.element, updateCard1, convertToAnimeMutation]);
 
   const handleAIAnime2 = useCallback(async () => {
-    if (!card2.photoUrl && !card2.photoFile) {
+    if (!card2.photoFile) {
       toast.error("2枚目の写真をアップロードしてください");
       return;
     }
     setIsGeneratingAI2(true);
     toast.info("2枚目：AIがDQ風チビキャラに変換中... 30～60秒ほどお待ちください");
     try {
-      const { base64, mimeType } = await getPhotoBase64(card2);
+      const { base64, mimeType } = await fileToBase64(card2.photoFile);
       const result = await convertToAnimeMutation.mutateAsync({
         photoBase64: base64,
         mimeType,
@@ -182,14 +127,14 @@ export default function Home() {
     } finally {
       setIsGeneratingAI2(false);
     }
-  }, [card2, updateCard2, convertToAnimeMutation, getPhotoBase64]);
+  }, [card2.photoFile, card2.element, updateCard2, convertToAnimeMutation]);
 
   const handleDownload = useCallback(async () => {
     setIsDownloading(true);
     toast.info("用紙サイズに合わせた画像を生成中...");
     try {
       await downloadDualCard(card1, card2);
-      toast.success("新しいタブで画像が開きます。画像を長押しして「写真に保存」を選択してください。");
+      toast.success("カードシートを保存しました！");
     } catch (error) {
       const msg = error instanceof Error ? error.message : "不明なエラー";
       toast.error(`保存に失敗しました: ${msg}`);
@@ -387,7 +332,6 @@ export default function Home() {
             updateCardData={updateCard1}
             onAIAnime={handleAIAnime1}
             isGeneratingAI={isGeneratingAI1}
-            queueWaiting={isGeneratingAI1 ? queueWaiting : 0}
             hideDownload
           />
         </div>
@@ -448,7 +392,6 @@ export default function Home() {
             updateCardData={updateCard2}
             onAIAnime={handleAIAnime2}
             isGeneratingAI={isGeneratingAI2}
-            queueWaiting={isGeneratingAI2 ? queueWaiting : 0}
             hideDownload
           />
         </div>

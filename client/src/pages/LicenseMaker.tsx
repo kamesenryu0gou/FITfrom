@@ -669,44 +669,20 @@ async function downloadLicenseSheet(card1: LicenseData, card2: LicenseData) {
   await renderLicenseCardOnCanvas(ctx, card2, baseImg);
   ctx.restore();
 
-  // 全デバイス共通: 新しいタブで画像を表示→長押しで写真アプリに保存
-  const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
-  const newTab = window.open("", "_blank");
-  if (newTab) {
-    newTab.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>免許カードを保存</title>
-        <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { background: #111; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
-          .msg { color: #fff; font-size: 18px; font-weight: bold; margin-bottom: 16px; text-align: center; line-height: 1.6; }
-          .sub { color: #aaa; font-size: 14px; margin-bottom: 24px; text-align: center; }
-          img { max-width: 100%; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
-        </style>
-      </head>
-      <body>
-        <p class="msg">免許画像を長押しして「写真に保存」を選択</p>
-        <p class="sub">(iOS: 長押し → 「写真に保存」 / Android: 長押し → 「画像を保存」)</p>
-        <img src="${dataUrl}" alt="免許カード" />
-      </body>
-      </html>
-    `);
-    newTab.document.close();
-  } else {
-    // ポップアップブロック時のフォールバック: ダウンロード
-    const blob = await new Promise<Blob>((res, rej) =>
-      canvas.toBlob((b) => b ? res(b) : rej(new Error("toBlob null")), "image/jpeg", 0.9)
-    );
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = "license-sheet.jpg";
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  const blob = await new Promise<Blob>((res, rej) =>
+    canvas.toBlob((b) => b ? res(b) : rej(new Error("toBlob null")), "image/png")
+  );
+  const filename = "license-sheet.png";
+  const file = new File([blob], filename, { type: "image/png" });
+  if (typeof navigator.share === "function" && typeof navigator.canShare === "function" && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: "免許メーカー" }); return; }
+    catch (e) { if ((e as Error).name === "AbortError") return; }
   }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
 // ── Form Component ─────────────────────────────────────────────────────────────
@@ -721,17 +697,7 @@ function LicenseForm({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
-  const [queueWaiting, setQueueWaiting] = useState(0);
   const convertToCarStyle = trpc.license.convertToCarStyle.useMutation();
-
-  // AI加工中はキュー待機人数をポーリングして表示する
-  const { data: queueData } = trpc.license.queueDepth.useQuery(undefined, {
-    refetchInterval: isGeneratingAI ? 3000 : false,
-    enabled: isGeneratingAI,
-  });
-  useEffect(() => {
-    setQueueWaiting(queueData?.depth ?? 0);
-  }, [queueData]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -911,11 +877,7 @@ function LicenseForm({
                 boxShadow: isGeneratingAI ? "none" : "0 4px 0 #004bb5",
               }}
             >
-              {isGeneratingAI
-                ? (queueWaiting > 0
-                    ? `AI加工待機中... あなたの前に${queueWaiting}人待ちです`
-                    : "生成中...")
-                : "AIイラスト化"}
+              {isGeneratingAI ? "生成中..." : "AIイラスト化"}
             </button>
           )}
         </div>
@@ -963,7 +925,7 @@ export default function LicenseMaker() {
     setIsDownloading(true);
     try {
       await downloadLicenseSheet(card1, card2.nickname ? card2 : card1);
-      toast.success("新しいタブで画像が開きます。画像を長押しして「写真に保存」を選択してください。");
+      toast.success("免許シートを保存しました！");
     } catch (e) {
       toast.error("ダウンロードに失敗しました");
       console.error(e);

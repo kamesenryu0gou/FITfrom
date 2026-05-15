@@ -523,47 +523,39 @@ export async function downloadDualCard(card1: CardData, card2: CardData): Promis
   const blob = await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
       (b) => { if (b) resolve(b); else reject(new Error("Canvas toBlob returned null")); },
-      "image/jpeg",
-      0.9
+      "image/png"
     );
   });
 
-  // 全デバイス共通: 新しいタブで画像を表示→長押しで写真アプリに保存
-  const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
-  const newTab = window.open("", "_blank");
-  if (newTab) {
-    newTab.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>FIT WARS カードを保存</title>
-        <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { background: #111; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
-          .msg { color: #fff; font-size: 18px; font-weight: bold; margin-bottom: 16px; text-align: center; line-height: 1.6; }
-          .sub { color: #aaa; font-size: 14px; margin-bottom: 24px; text-align: center; }
-          img { max-width: 100%; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
-        </style>
-      </head>
-      <body>
-        <p class="msg">カード画像を長押しして「写真に保存」を選択</p>
-        <p class="sub">(iOS: 長押し → 「写真に保存」 / Android: 長押し → 「画像を保存」)</p>
-        <img src="${dataUrl}" alt="FIT WARS カード" />
-      </body>
-      </html>
-    `);
-    newTab.document.close();
-  } else {
-    // ポップアップブロック時のフォールバック: ダウンロード
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "fitwars-card-sheet.jpg";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  const filename = "fitwars-card-sheet.png";
+  const file = new File([blob], filename, { type: "image/png" });
+
+  // Web Share API (iOS/Android ネイティブ共有シートで写真アプリに保存)
+  if (
+    typeof navigator.share === "function" &&
+    typeof navigator.canShare === "function" &&
+    navigator.canShare({ files: [file] })
+  ) {
+    try {
+      await navigator.share({
+        files: [file],
+        title: "FIT WARS カードシート",
+        text: "FIT WARS Card Maker — 2面付きカードシート",
+      });
+      return;
+    } catch (err) {
+      if ((err as Error).name === "AbortError") return;
+      // 共有失敗時はフォールバックに進む
+    }
   }
+
+  // Fallback: anchor download (デスクトップ・非対応ブラウザ)
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
