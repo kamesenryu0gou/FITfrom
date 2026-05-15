@@ -1095,6 +1095,7 @@ export default function LicenseMaker() {
           <div style={dividerStyle} />
 
           <LicenseForm
+            key={activeCard}
             data={activeData}
             onChange={setActiveData}
             cardNum={activeCard}
