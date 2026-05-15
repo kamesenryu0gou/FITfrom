@@ -530,14 +530,26 @@ export async function downloadDualCard(card1: CardData, card2: CardData): Promis
 
   const filename = "fitwars-card-sheet.jpg";
 
-  // 全デバイス統一: <a download> でダウンロード（iOS/Android/PC共通）
-  // iOS Chromeでは「a》タグのdownload属性が機能し、ファイルアプリまたは写真アプリに保存される
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  // iOS Safari: Web Share APIで写真アプリに直接保存できる
+  // Android/PC: <a download> でダウンロード
+  if (
+    typeof navigator !== "undefined" &&
+    navigator.share &&
+    navigator.canShare &&
+    navigator.canShare({ files: [new File([blob], filename, { type: "image/jpeg" })] })
+  ) {
+    // Web Share API対応（iOS Safari、一部Android）→共有シートから写真に保存可能
+    const file = new File([blob], filename, { type: "image/jpeg" });
+    await navigator.share({ files: [file], title: "FIT WARS カード" });
+  } else {
+    // フォールバック: <a download>（PC・Android Chrome）
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  }
 }

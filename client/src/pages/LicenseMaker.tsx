@@ -673,12 +673,23 @@ async function downloadLicenseSheet(card1: LicenseData, card2: LicenseData) {
     canvas.toBlob((b) => b ? res(b) : rej(new Error("toBlob null")), "image/jpeg", 0.9)
   );
   const filename = "license-sheet.jpg";
-  // 全デバイス統一: <a download> でJPEGダウンロード（iOS/Android/PC共通）
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = filename;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  // iOS Safari: Web Share APIで写真アプリに直接保存できる
+  // Android/PC: <a download> でダウンロード
+  if (
+    typeof navigator !== "undefined" &&
+    navigator.share &&
+    navigator.canShare &&
+    navigator.canShare({ files: [new File([blob], filename, { type: "image/jpeg" })] })
+  ) {
+    const file = new File([blob], filename, { type: "image/jpeg" });
+    await navigator.share({ files: [file], title: "免許メーカー" });
+  } else {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  }
 }
 
 // ── Form Component ─────────────────────────────────────────────────────────────

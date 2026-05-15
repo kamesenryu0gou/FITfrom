@@ -71,13 +71,13 @@ export default function Home() {
     setCard2((prev) => ({ ...prev, ...updates }));
   }, []);
 
-  // Canvas APIで画像を最大1024pxにリサイズし、JPEG 80%に圧縮してbase64を返す
-  // iPhoneの大容量写真（4-8MB）を送信可能なサイズに圧縮する
+  // Canvas APIで画像を最大1536pxにリサイズし、JPEG 95%に圧縮してbase64を返す
+  // 品質優先：顔の特徴を保持しつつiPhoneの大容量写真に対応する
   const compressImageToBase64 = useCallback((dataUrl: string): Promise<{ base64: string; mimeType: string }> => {
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => {
-        const MAX_SIZE = 1024;
+        const MAX_SIZE = 1536;
         let { width, height } = img;
         if (width > MAX_SIZE || height > MAX_SIZE) {
           if (width > height) {
@@ -94,7 +94,7 @@ export default function Home() {
         const ctx = canvas.getContext("2d");
         if (!ctx) { reject(new Error("Canvasを作成できませんでした")); return; }
         ctx.drawImage(img, 0, 0, width, height);
-        const compressed = canvas.toDataURL("image/jpeg", 0.8);
+        const compressed = canvas.toDataURL("image/jpeg", 0.95);
         const [, base64] = compressed.split(",");
         resolve({ base64, mimeType: "image/jpeg" });
       };
