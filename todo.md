@@ -70,8 +70,21 @@
 -- [x] FIT WARS：必殺技・カードの説明の差し込み文字フォントサイズを2サイズアップ
 - [x] FIT WARS：AI画像加工の失敗原因を特定して修正（JSON形式→multipart/form-data形式に修正）
 - [x] 免許メーカー：AI画像加工の失敗原因を特定して修正（JSON形式→multipart/form-data形式に修正）
-- [ ] AI加工：OpenAI APIレート制限エラー（Rate exceeded）に対して自動リトライ（最大3回・指数バックオフ）を実装
+- [x] AI加工：OpenAI APIレート制限エラー（Rate exceeded）に対してセマフォ方式で同時実行数を制限しレート制限を回避
 - [x] AI加工：リクエストキュー方式を実装（server/aiQueue.ts作成・直列処理・待機人数表示）
 - [x] iOS・Android問わず端末の画像（カメラロール）として保存できるダウンロード仕様に統一
 - [x] AIキュー：直列処理からセマフォ方式（最大3件並列）に変更して複数人同時アクセスに対応
 - [x] iOS/Androidの保存フロー案内整備（iOSは新規タブ＋長押し保存の案内トースト表示済み、Androidはダウンロードフォルダ保存）
+- [x] AI加工：OpenAI APIの429/Rate exceededを明示的に検知し、最大3回の指数バックオフ自動リトライを実装（5秒・15秒・30秒）
+
+## 本番運用対応（イベント催事向け）
+
+- [ ] 環境変数追加：MAX_CONCURRENT_AI_REQUESTS=10, AI_RETRY_COUNT=3, AI_TIMEOUT_MS=90000, AI_QUEUE_WAIT_LIMIT=120000
+- [ ] DBスキーマ：ai_logsテーブル追加（jobId, location, status, errorType, errorMessage, processingTime, createdAt）
+- [ ] aiQueue.ts：MAX_CONCURRENT=10（環境変数対応）・セマフォ方式に書き直す
+- [ ] routers.ts：リトライ間隔を2秒・5秒・10秒に変更、タイムアウト90秒、エラー分類（429/500/timeout/empty）、失敗ログDB保存
+- [ ] 拠点ID対応：URLパラメータ?location=xxxを全ページで読み取りAIログに保存
+- [ ] 管理画面（/admin）：待機人数・処理中件数・成功失敗件数・平均処理時間・エラー内容・拠点名・最終処理日時
+- [ ] FIT WARS UI：進行状況メッセージ（準備中/生成中/混雑中）・ボタン無効化・段階的エラーメッセージ（1回目/2回目/最終失敗）
+- [ ] 免許メーカー UI：同上の進行状況・ボタン無効化・段階的エラーメッセージ
+- [ ] 画像前処理：アップロード時に自動リサイズ・JPEG統一・容量圧縮

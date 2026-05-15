@@ -1,87 +1,115 @@
 /**
- * AI画像加工リクエスト制御 — セマフォ方式
+ * AI Request Queue — Semaphore-based concurrent processor
  *
- * 複数人が同時にAI加工を要求した場合、OpenAI APIのレート制限に
- * 引っかからないよう、同時実行数を上限（MAX_CONCURRENT）に制限する。
- *
- * 設計：
- * - 同時実行数を最大 MAX_CONCURRENT 件に制限（セマフォ）
- * - 上限に達した場合は空きが出るまで待機キューに積む
- * - 各ジョブにタイムアウト（90秒）を設けて詰まりを防ぐ
- * - getQueueDepth() で「現在の待機人数」を返す（フロントエンド表示用）
- *
- * 例：MAX_CONCURRENT=3 の場合
- *   - 同時3人まで即座に処理開始
- *   - 4人目以降は1件完了次第すぐに処理開始
- *   - 10人が同時アクセスしても詰まらず順次さばける
+ * 設計方針:
+ * - 環境変数 MAX_CONCURRENT_AI_REQUESTS で同時実行数を制御（デフォルト10）
+ * - セマフォ方式で同時実行数を超えたリクエストは待機
+ * - AI_QUEUE_WAIT_LIMIT を超えた待機は即エラー
+ * - キュー統計情報をリアルタイムで提供（管理画面用）
+ * - getQueueDepth() は後方互換のため維持
  */
 
-const MAX_CONCURRENT = 3; // OpenAI gpt-image-1 のレート制限に合わせた同時実行数
-const QUEUE_TIMEOUT_MS = 90_000; // 1ジョブあたりの最大処理時間（90秒）
+const MAX_CONCURRENT = parseInt(process.env.MAX_CONCURRENT_AI_REQUESTS ?? "10", 10);
+const QUEUE_WAIT_LIMIT = parseInt(process.env.AI_QUEUE_WAIT_LIMIT ?? "120000", 10);
+const JOB_TIMEOUT_MS = parseInt(process.env.AI_TIMEOUT_MS ?? "90000", 10);
 
-// 現在実行中のジョブ数
-let _running = 0;
+// ── 統計カウンター（管理画面用） ──────────────────────────────────────────
+const stats = {
+  queued: 0,
+  running: 0,
+  succeeded: 0,
+  failed: 0,
+  totalMs: 0,
+  completedCount: 0,
+};
 
-// 待機中のジョブ（resolve を呼ぶと実行許可が下りる）
-const _waitQueue: Array<() => void> = [];
-
-/**
- * 現在の待機人数を返す（実行中は含まない）
- */
-export function getQueueDepth(): number {
-  return _waitQueue.length;
+export function getQueueStats() {
+  return {
+    queued: stats.queued,
+    running: stats.running,
+    succeeded: stats.succeeded,
+    failed: stats.failed,
+    avgProcessingMs: stats.completedCount > 0
+      ? Math.round(stats.totalMs / stats.completedCount)
+      : 0,
+    maxConcurrent: MAX_CONCURRENT,
+  };
 }
 
-/**
- * セマフォを取得する（空きがなければ待機）
- */
-function acquireSemaphore(): Promise<void> {
-  if (_running < MAX_CONCURRENT) {
-    _running++;
-    return Promise.resolve();
-  }
-  // 空きが出るまで待機キューに積む
-  return new Promise<void>((resolve) => {
-    _waitQueue.push(resolve);
+/** 後方互換: 待機中 + 実行中の合計を返す */
+export function getQueueDepth(): number {
+  return stats.queued + stats.running;
+}
+
+// ── セマフォ実装 ──────────────────────────────────────────────────────────
+let activeSlots = 0;
+const waitQueue: Array<() => void> = [];
+
+function acquireSlot(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (activeSlots < MAX_CONCURRENT) {
+      activeSlots++;
+      stats.running++;
+      resolve();
+      return;
+    }
+
+    // 待機キューに追加
+    stats.queued++;
+    let settled = false;
+
+    const timeout = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      stats.queued = Math.max(0, stats.queued - 1);
+      const idx = waitQueue.indexOf(tryAcquire);
+      if (idx !== -1) waitQueue.splice(idx, 1);
+      reject(new Error("QUEUE_TIMEOUT: 混雑しています。しばらく後にお試しください。"));
+    }, QUEUE_WAIT_LIMIT);
+
+    const tryAcquire = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      stats.queued = Math.max(0, stats.queued - 1);
+      activeSlots++;
+      stats.running++;
+      resolve();
+    };
+
+    waitQueue.push(tryAcquire);
   });
 }
 
-/**
- * セマフォを解放する（次の待機ジョブを起動）
- */
-function releaseSemaphore(): void {
-  const next = _waitQueue.shift();
-  if (next) {
-    // 待機中のジョブに実行許可を渡す（_running は変わらない）
-    next();
-  } else {
-    _running = Math.max(0, _running - 1);
-  }
+function releaseSlot(): void {
+  activeSlots = Math.max(0, activeSlots - 1);
+  stats.running = Math.max(0, stats.running - 1);
+  const next = waitQueue.shift();
+  if (next) next();
 }
 
-/**
- * AI加工タスクをセマフォ制御下で実行する。
- * MAX_CONCURRENT 件まで同時実行し、超過分は待機させる。
- *
- * @param task - 実行する非同期関数
- * @returns タスクの戻り値
- */
+// ── メインエントリ ────────────────────────────────────────────────────────
 export async function enqueueAiTask<T>(task: () => Promise<T>): Promise<T> {
-  // セマフォ取得（空きがなければここで待機）
-  await acquireSemaphore();
+  await acquireSlot();
+  const startMs = Date.now();
 
-  // タイムアウト付きで実行
   const timeoutPromise = new Promise<never>((_, reject) =>
     setTimeout(
       () => reject(new Error("AI処理がタイムアウトしました。再度お試しください。")),
-      QUEUE_TIMEOUT_MS
+      JOB_TIMEOUT_MS
     )
   );
 
   try {
     const result = await Promise.race([task(), timeoutPromise]);
+    stats.succeeded++;
+    stats.totalMs += Date.now() - startMs;
+    stats.completedCount++;
     return result;
+  } catch (err) {
+    stats.failed++;
+    throw err;
   } finally {
-    releaseSemaphore();
+    releaseSlot();
   }
 }
