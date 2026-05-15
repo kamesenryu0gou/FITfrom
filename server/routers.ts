@@ -326,34 +326,59 @@ async function generateAnimeCharacter(options: {
   }
 
   // OpenAI SDK の client.images.edit() を使って multipart/form-data を正しく送信する
+  // 429/500 エラーに対して指数バックオフで最大3回リトライ（2秒→5秒→10秒）
   const openai = new OpenAI({ apiKey });
-  const imageFile = await toFile(jpegBuffer, "photo.jpg", { type: "image/jpeg" });
+  const RETRY_DELAYS = [2000, 5000, 10000];
+  let lastError: unknown;
 
-  const editData = await openai.images.edit({
-    model: "gpt-image-1",
-    image: imageFile,
-    prompt,
-    n: 1,
-    size: "1024x1024",
-    quality: "high",
-  });
+  for (let attempt = 0; attempt <= RETRY_DELAYS.length; attempt++) {
+    try {
+      // imageFile は毎回新しく作成（ストリームの再利用不可のため）
+      const imageFile = await toFile(jpegBuffer, "photo.jpg", { type: "image/jpeg" });
 
-  const b64 = editData.data?.[0]?.b64_json;
-  const imageUrl = editData.data?.[0]?.url;
+      const editData = await openai.images.edit({
+        model: "gpt-image-1",
+        image: imageFile,
+        prompt,
+        n: 1,
+        size: "1024x1024",
+        quality: "high",
+      });
 
-  if (b64) {
-    const buffer = Buffer.from(b64, "base64");
-    const { url } = await storagePut(`anime-converted/${Date.now()}.png`, buffer, "image/png");
-    return url;
-  } else if (imageUrl) {
-    const imgRes = await fetch(imageUrl);
-    if (!imgRes.ok) throw new Error("Failed to download generated image");
-    const imgBuffer = Buffer.from(await imgRes.arrayBuffer());
-    const { url } = await storagePut(`anime-converted/${Date.now()}.png`, imgBuffer, "image/png");
-    return url;
+      const b64 = editData.data?.[0]?.b64_json;
+      const imageUrl = editData.data?.[0]?.url;
+
+      if (b64) {
+        const buffer = Buffer.from(b64, "base64");
+        const { url } = await storagePut(`anime-converted/${Date.now()}.png`, buffer, "image/png");
+        return url;
+      } else if (imageUrl) {
+        const imgRes = await fetch(imageUrl);
+        if (!imgRes.ok) throw new Error("Failed to download generated image");
+        const imgBuffer = Buffer.from(await imgRes.arrayBuffer());
+        const { url } = await storagePut(`anime-converted/${Date.now()}.png`, imgBuffer, "image/png");
+        return url;
+      }
+
+      throw new Error("No image data returned from gpt-image-1");
+    } catch (err: unknown) {
+      lastError = err;
+      // リトライ対象: 429 (Rate Limit) / 500 (Server Error) / 503 (Overloaded)
+      const status = (err as { status?: number })?.status;
+      const isRetryable = status === 429 || status === 500 || status === 503
+        || (err instanceof Error && (err.message.includes("rate") || err.message.includes("overloaded") || err.message.includes("server error")));
+
+      if (!isRetryable || attempt >= RETRY_DELAYS.length) {
+        throw err;
+      }
+
+      const delay = RETRY_DELAYS[attempt];
+      console.warn(`[AI retry] attempt=${attempt + 1} status=${status} delay=${delay}ms err=${String(err)}`);
+      await new Promise((r) => setTimeout(r, delay));
+    }
   }
 
-  throw new Error("No image data returned from gpt-image-1");
+  throw lastError;
 }
 
 // ── License Maker: Sugar Rush anime-style character conversion ────────────────────────────────────
