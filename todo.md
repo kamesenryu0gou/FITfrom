@@ -88,3 +88,4 @@
 - [ ] FIT WARS UI：進行状況メッセージ（準備中/生成中/混雑中）・ボタン無効化・段階的エラーメッセージ（1回目/2回目/最終失敗）
 - [ ] 免許メーカー UI：同上の進行状況・ボタン無効化・段階的エラーメッセージ
 - [ ] 画像前処理：アップロード時に自動リサイズ・JPEG統一・容量圧縮
+- [x] FIT WARS・免許メーカー AI加工：「The string did not match the expected pattern.」エラー修正（OpenAI直接呼び出し→Manus組み込みgenerateImageヘルパーに変更）
