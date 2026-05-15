@@ -520,33 +520,15 @@ export async function downloadDualCard(card1: CardData, card2: CardData): Promis
   const blob = await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
       (b) => { if (b) resolve(b); else reject(new Error("Canvas toBlob returned null")); },
-      "image/png"
+      "image/jpeg",
+      0.9
     );
   });
 
-  const filename = "fitwars-card-sheet.png";
+  const filename = "fitwars-card-sheet.jpg";
 
-  // iOS検出：User Agentに iPhone/iPad が含まれるかチェック
-  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-
-  if (isIOS) {
-    // iOS: 新しいタブで画像を開く→ユーザーが長押しで「写真に保存」できる
-    const url = URL.createObjectURL(blob);
-    const newTab = window.open(url, "_blank");
-    if (!newTab) {
-      const a = document.createElement("a");
-      a.href = url;
-      a.target = "_blank";
-      a.rel = "noopener";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    }
-    setTimeout(() => URL.revokeObjectURL(url), 30000);
-    return;
-  }
-
-  // Android / デスクトップ: <a download> でダウンロード
+  // 全デバイス統一: <a download> でダウンロード（iOS/Android/PC共通）
+  // iOS Chromeでは「a》タグのdownload属性が機能し、ファイルアプリまたは写真アプリに保存される
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;

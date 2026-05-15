@@ -27,12 +27,21 @@ async function getCroppedImg(imageSrc: string, pixelCrop: CropArea): Promise<str
     img.onerror = reject;
     img.src = imageSrc;
   });
+  // 全デバイス共通: トリミング後に最大1024pxにリサイズしJPEG 80%に圧縮
+  // iPhoneの大容量写真でも送信可能なサイズに圧縮する
+  const MAX_SIZE = 1024;
+  let outW = pixelCrop.width;
+  let outH = pixelCrop.height;
+  if (outW > MAX_SIZE || outH > MAX_SIZE) {
+    if (outW > outH) { outH = Math.round((outH * MAX_SIZE) / outW); outW = MAX_SIZE; }
+    else { outW = Math.round((outW * MAX_SIZE) / outH); outH = MAX_SIZE; }
+  }
   const canvas = document.createElement("canvas");
-  canvas.width = pixelCrop.width;
-  canvas.height = pixelCrop.height;
+  canvas.width = outW;
+  canvas.height = outH;
   const ctx = canvas.getContext("2d")!;
-  ctx.drawImage(image, pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height, 0, 0, pixelCrop.width, pixelCrop.height);
-  return canvas.toDataURL("image/jpeg", 0.95);
+  ctx.drawImage(image, pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height, 0, 0, outW, outH);
+  return canvas.toDataURL("image/jpeg", 0.8);
 }
 
 // ── Crop Modal ────────────────────────────────────────────────────────────────

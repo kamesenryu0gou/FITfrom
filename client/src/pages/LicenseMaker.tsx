@@ -48,18 +48,26 @@ async function getCroppedImg(imageSrc: string, pixelCrop: CropArea): Promise<str
     img.onerror = reject;
     img.src = imageSrc;
   });
+  // 全デバイス共通: トリミング後に最大1024pxにリサイズしJPEG 80%に圧縮
+  const MAX_SIZE = 1024;
+  let outW = pixelCrop.width;
+  let outH = pixelCrop.height;
+  if (outW > MAX_SIZE || outH > MAX_SIZE) {
+    if (outW > outH) { outH = Math.round((outH * MAX_SIZE) / outW); outW = MAX_SIZE; }
+    else { outW = Math.round((outW * MAX_SIZE) / outH); outH = MAX_SIZE; }
+  }
   const canvas = document.createElement("canvas");
-  canvas.width = pixelCrop.width;
-  canvas.height = pixelCrop.height;
+  canvas.width = outW;
+  canvas.height = outH;
   const ctx = canvas.getContext("2d")!;
   ctx.drawImage(
     image,
     pixelCrop.x, pixelCrop.y,
     pixelCrop.width, pixelCrop.height,
     0, 0,
-    pixelCrop.width, pixelCrop.height
+    outW, outH
   );
-  return canvas.toDataURL("image/jpeg", 0.95);
+  return canvas.toDataURL("image/jpeg", 0.8);
 }
 
 // ── Crop Modal ─────────────────────────────────────────────────────────────────
@@ -660,14 +668,10 @@ async function downloadLicenseSheet(card1: LicenseData, card2: LicenseData) {
   ctx.restore();
 
   const blob = await new Promise<Blob>((res, rej) =>
-    canvas.toBlob((b) => b ? res(b) : rej(new Error("toBlob null")), "image/png")
+    canvas.toBlob((b) => b ? res(b) : rej(new Error("toBlob null")), "image/jpeg", 0.9)
   );
-  const filename = "license-sheet.png";
-  const file = new File([blob], filename, { type: "image/png" });
-  if (typeof navigator.share === "function" && typeof navigator.canShare === "function" && navigator.canShare({ files: [file] })) {
-    try { await navigator.share({ files: [file], title: "免許メーカー" }); return; }
-    catch (e) { if ((e as Error).name === "AbortError") return; }
-  }
+  const filename = "license-sheet.jpg";
+  // 全デバイス統一: <a download> でJPEGダウンロード（iOS/Android/PC共通）
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url; a.download = filename;
@@ -929,12 +933,7 @@ export default function LicenseMaker() {
     setIsDownloading(true);
     try {
       await downloadLicenseSheet(card1, card2.nickname ? card2 : card1);
-      const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-      if (isIOS) {
-        toast.success("画像を開きました。画像を長押しして「写真に保存」をタップしてください", { duration: 6000 });
-      } else {
-        toast.success("免許証を保存しました！");
-      }
+      toast.success("免許証をダウンロードしました！「ファイル」または「写真」アプリに保存されます。");
     } catch (e) {
       toast.error("ダウンロードに失敗しました");
       console.error(e);
