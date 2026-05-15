@@ -5,7 +5,7 @@ import { publicProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { storagePut } from "./storage";
 import sharp from "sharp";
-import { toFile } from "openai";
+import OpenAI, { toFile } from "openai";
 
 /**
  * AI Anime Conversion — DQ風チビキャラ変換 v4 (Clean Reset)
@@ -325,30 +325,19 @@ async function generateAnimeCharacter(options: {
     jpegBuffer = Buffer.from(options.photoBase64, "base64");
   }
 
-  // gpt-image-1 の images/edits エンドポイントは multipart/form-data 形式のみ対応
-  // toFile で File オブジェクトに変換して FormData に追加する
+  // OpenAI SDK の client.images.edit() を使って multipart/form-data を正しく送信する
+  const openai = new OpenAI({ apiKey });
   const imageFile = await toFile(jpegBuffer, "photo.jpg", { type: "image/jpeg" });
 
-  const formData = new FormData();
-  formData.append("model", "gpt-image-1");
-  formData.append("prompt", prompt);
-  formData.append("image", imageFile as unknown as Blob);
-  formData.append("n", "1");
-  formData.append("size", "1024x1024");
-  formData.append("quality", "high");
-
-  const editResponse = await fetch("https://api.openai.com/v1/images/edits", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}` },
-    body: formData,
+  const editData = await openai.images.edit({
+    model: "gpt-image-1",
+    image: imageFile,
+    prompt,
+    n: 1,
+    size: "1024x1024",
+    quality: "high",
   });
 
-  if (!editResponse.ok) {
-    const err = await editResponse.json().catch(() => ({})) as { error?: { message?: string } };
-    throw new Error(`gpt-image-1 edit error: ${err?.error?.message || editResponse.status}`);
-  }
-
-  const editData = await editResponse.json() as { data?: Array<{ b64_json?: string; url?: string }> };
   const b64 = editData.data?.[0]?.b64_json;
   const imageUrl = editData.data?.[0]?.url;
 
@@ -414,29 +403,19 @@ async function generateLicenseCharacter(options: {
     jpegBuffer = Buffer.from(options.photoBase64, "base64");
   }
 
-  // gpt-image-1 の images/edits エンドポイントは multipart/form-data 形式のみ対応
+  // OpenAI SDK の client.images.edit() を使って multipart/form-data を正しく送信する
+  const openai = new OpenAI({ apiKey });
   const imageFile = await toFile(jpegBuffer, "photo.jpg", { type: "image/jpeg" });
 
-  const formData = new FormData();
-  formData.append("model", "gpt-image-1");
-  formData.append("prompt", LICENSE_CARS_PROMPT);
-  formData.append("image", imageFile as unknown as Blob);
-  formData.append("n", "1");
-  formData.append("size", "1024x1024");
-  formData.append("quality", "high");
-
-  const editResponse = await fetch("https://api.openai.com/v1/images/edits", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}` },
-    body: formData,
+  const editData = await openai.images.edit({
+    model: "gpt-image-1",
+    image: imageFile,
+    prompt: LICENSE_CARS_PROMPT,
+    n: 1,
+    size: "1024x1024",
+    quality: "high",
   });
 
-  if (!editResponse.ok) {
-    const err = await editResponse.json().catch(() => ({})) as { error?: { message?: string } };
-    throw new Error(`gpt-image-1 edit error: ${err?.error?.message || editResponse.status}`);
-  }
-
-  const editData = await editResponse.json() as { data?: Array<{ b64_json?: string; url?: string }> };
   const b64 = editData.data?.[0]?.b64_json;
   const imageUrl = editData.data?.[0]?.url;
 
