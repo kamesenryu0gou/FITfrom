@@ -10,6 +10,7 @@ import { useLocation } from "wouter";
 import { toast } from "sonner";
 import Cropper from "react-easy-crop";
 import { trpc } from "@/lib/trpc";
+import AIPasswordModal from "@/components/AIPasswordModal";
 
 const LICENSE_LOGO_URL = "/manus-storage/license-maker-logo-v3_378adfe6.png";
 const LICENSE_CARD_BASE_URL = "/manus-storage/license-card-base_65f89f3f.png";
@@ -695,6 +696,7 @@ function LicenseForm({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const convertToCarStyle = trpc.license.convertToCarStyle.useMutation();
   const { data: queueStatus } = trpc.ai.queueStatus.useQuery(undefined, {
     refetchInterval: isGeneratingAI ? 2000 : false,
@@ -718,7 +720,18 @@ function LicenseForm({
     setCropSrc(null);
   };
 
+  // AIボタン押下時: パスワードモーダルを表示する
+  const handleAIButtonClick = () => {
+    if (!data.photoUrl) {
+      toast.error("まず写真を選択してください");
+      return;
+    }
+    setShowPasswordModal(true);
+  };
+
+  // パスワード認証成功後に実際のAI加工を実行する
   const handleGenerateAI = async () => {
+    setShowPasswordModal(false);
     if (!data.photoUrl) {
       toast.error("まず写真を選択してください");
       return;
@@ -866,7 +879,7 @@ function LicenseForm({
           </button>
           {data.photoUrl && (
             <button
-              onClick={handleGenerateAI}
+              onClick={handleAIButtonClick}
               disabled={isGeneratingAI}
               style={{
                 flex: 1, minWidth: "120px", padding: "12px 16px",
@@ -904,6 +917,13 @@ function LicenseForm({
           </div>
         )}
       </div>
+
+      {/* パスワードモーダル */}
+      <AIPasswordModal
+        open={showPasswordModal}
+        onSuccess={handleGenerateAI}
+        onCancel={() => setShowPasswordModal(false)}
+      />
     </div>
   );
 }

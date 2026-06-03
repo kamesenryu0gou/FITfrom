@@ -14,6 +14,7 @@ import CardPreview from "@/components/CardPreview";
 import CardForm from "@/components/CardForm";
 import { trpc } from "@/lib/trpc";
 import { downloadDualCard } from "@/lib/cardCanvas";
+import AIPasswordModal from "@/components/AIPasswordModal";
 
 export type ElementType = "火" | "水" | "草" | "闇";
 
@@ -52,6 +53,8 @@ export default function Home() {
   const [isGeneratingAI1, setIsGeneratingAI1] = useState(false);
   const [isGeneratingAI2, setIsGeneratingAI2] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  // パスワードモーダル: null=非表示, 1=1枚目用, 2=2枚目用
+  const [passwordModalTarget, setPasswordModalTarget] = useState<null | 1 | 2>(null);
   // 1枚目・2枚目で別々の mutation インスタンスを使う（同一インスタンス共有だと競合してエラーになる）
   const convertToAnimeMutation1 = trpc.card.convertToAnime.useMutation();
   const convertToAnimeMutation2 = trpc.card.convertToAnime.useMutation();
@@ -68,7 +71,39 @@ export default function Home() {
     setCard2((prev) => ({ ...prev, ...updates }));
   }, []);
 
-  const handleAIAnime1 = useCallback(async () => {
+  // パスワード認証成功後に実際のAI加工を実行する
+  const executeAIAnime1 = useCallback(async () => {
+    setPasswordModalTarget(null);
+    await handleAIAnime1Direct();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const executeAIAnime2 = useCallback(async () => {
+    setPasswordModalTarget(null);
+    await handleAIAnime2Direct();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // AIボタン押下時: パスワードモーダルを表示する
+  const handleAIAnime1 = useCallback(() => {
+    const sourceUrl = card1.originalPhotoUrl || card1.photoUrl;
+    if (!sourceUrl || !sourceUrl.startsWith("data:")) {
+      toast.error("1枚目の写真をアップロードしてください");
+      return;
+    }
+    setPasswordModalTarget(1);
+  }, [card1.originalPhotoUrl, card1.photoUrl]);
+
+  const handleAIAnime2 = useCallback(() => {
+    const sourceUrl = card2.originalPhotoUrl || card2.photoUrl;
+    if (!sourceUrl || !sourceUrl.startsWith("data:")) {
+      toast.error("2枚目の写真をアップロードしてください");
+      return;
+    }
+    setPasswordModalTarget(2);
+  }, [card2.originalPhotoUrl, card2.photoUrl]);
+
+  const handleAIAnime1Direct = useCallback(async () => {
     // originalPhotoUrl（トリミング済み JPEG data URL）を優先使用。
     // AI加工後に photoUrl が /manus-storage/... に上書きされてもこちらは変わらない。
     const sourceUrl = card1.originalPhotoUrl || card1.photoUrl;
@@ -101,7 +136,7 @@ export default function Home() {
     }
   }, [card1.originalPhotoUrl, card1.photoUrl, card1.element, updateCard1, convertToAnimeMutation1]);
 
-  const handleAIAnime2 = useCallback(async () => {
+  const handleAIAnime2Direct = useCallback(async () => {
     // originalPhotoUrl（トリミング済み JPEG data URL）を優先使用。
     // AI加工後に photoUrl が /manus-storage/... に上書きされてもこちらは変わらない。
     const sourceUrl = card2.originalPhotoUrl || card2.photoUrl;
@@ -498,6 +533,18 @@ export default function Home() {
           to { transform: rotate(360deg); }
         }
       `}</style>
+
+      {/* パスワードモーダル */}
+      <AIPasswordModal
+        open={passwordModalTarget === 1}
+        onSuccess={executeAIAnime1}
+        onCancel={() => setPasswordModalTarget(null)}
+      />
+      <AIPasswordModal
+        open={passwordModalTarget === 2}
+        onSuccess={executeAIAnime2}
+        onCancel={() => setPasswordModalTarget(null)}
+      />
     </div>
   );
 }
