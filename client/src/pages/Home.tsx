@@ -7,7 +7,7 @@
  * - ダウンロードボタンは最下部に1つのみ
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import CardPreview from "@/components/CardPreview";
@@ -63,6 +63,12 @@ export default function Home() {
   });
   const queueWaiting = queueStatus?.waiting ?? 0;
 
+  // 常に最新の card 状態を参照するため useRef で保持
+  const card1Ref = useRef(card1);
+  card1Ref.current = card1;
+  const card2Ref = useRef(card2);
+  card2Ref.current = card2;
+
   const updateCard1 = useCallback((updates: Partial<CardData>) => {
     setCard1((prev) => ({ ...prev, ...updates }));
   }, []);
@@ -71,56 +77,75 @@ export default function Home() {
     setCard2((prev) => ({ ...prev, ...updates }));
   }, []);
 
-  // パスワード認証成功後に実際のAI加工を実行する
-  const executeAIAnime1 = useCallback(async () => {
-    setPasswordModalTarget(null);
-    await handleAIAnime1Direct();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const executeAIAnime2 = useCallback(async () => {
-    setPasswordModalTarget(null);
-    await handleAIAnime2Direct();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   // AIボタン押下時: パスワードモーダルを表示する
   const handleAIAnime1 = useCallback(() => {
-    const sourceUrl = card1.originalPhotoUrl || card1.photoUrl;
-    if (!sourceUrl || !sourceUrl.startsWith("data:")) {
+    const c = card1Ref.current;
+    if (!c.photoUrl && !c.originalPhotoUrl) {
       toast.error("1枚目の写真をアップロードしてください");
       return;
     }
     setPasswordModalTarget(1);
-  }, [card1.originalPhotoUrl, card1.photoUrl]);
+  }, []);
 
   const handleAIAnime2 = useCallback(() => {
-    const sourceUrl = card2.originalPhotoUrl || card2.photoUrl;
-    if (!sourceUrl || !sourceUrl.startsWith("data:")) {
+    const c = card2Ref.current;
+    if (!c.photoUrl && !c.originalPhotoUrl) {
       toast.error("2枚目の写真をアップロードしてください");
       return;
     }
     setPasswordModalTarget(2);
-  }, [card2.originalPhotoUrl, card2.photoUrl]);
+  }, []);
 
+  // パスワード認証後に実行: 常に最新の card 状態を useRef 経由で参照する
   const handleAIAnime1Direct = useCallback(async () => {
-    // originalPhotoUrl（トリミング済み JPEG data URL）を優先使用。
-    // AI加工後に photoUrl が /manus-storage/... に上書きされてもこちらは変わらない。
-    const sourceUrl = card1.originalPhotoUrl || card1.photoUrl;
-    if (!sourceUrl || !sourceUrl.startsWith("data:")) {
+    const c = card1Ref.current;
+    // originalPhotoUrl（トリミング済み JPEG data URL）を優先使用
+    const sourceUrl = c.originalPhotoUrl || c.photoUrl;
+    if (!sourceUrl) {
       toast.error("1枚目の写真をアップロードしてください");
       return;
     }
     setIsGeneratingAI1(true);
     toast.info("1枚目：AIがDQ風チビキャラに変換中... 30～60秒ほどお待ちください");
     try {
-      // originalPhotoUrl はトリミング済み JPEG 80% の data URL → OpenAI が確実に受け付けられる形式
-      const [header, base64] = sourceUrl.split(",");
-      const mimeType = header.match(/data:([^;]+)/)?.[1] || "image/jpeg";
+      let base64: string;
+      let mimeType: string;
+      if (sourceUrl.startsWith("data:")) {
+        // data URLの場合: そのまま分割
+        const [header, b64] = sourceUrl.split(",");
+        base64 = b64;
+        mimeType = header.match(/data:([^;]+)/)?.[1] || "image/jpeg";
+      } else {
+        // /manus-storage/... URLの場合: Canvasで再圧縮してbase64化
+        const { b64, mime } = await new Promise<{ b64: string; mime: string }>((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.onload = () => {
+            const MAX_SIZE = 1024;
+            let { width, height } = img;
+            if (width > MAX_SIZE || height > MAX_SIZE) {
+              if (width > height) { height = Math.round((height * MAX_SIZE) / width); width = MAX_SIZE; }
+              else { width = Math.round((width * MAX_SIZE) / height); height = MAX_SIZE; }
+            }
+            const canvas = document.createElement("canvas");
+            canvas.width = width; canvas.height = height;
+            const ctx = canvas.getContext("2d");
+            if (!ctx) { reject(new Error("Canvas error")); return; }
+            ctx.drawImage(img, 0, 0, width, height);
+            const compressed = canvas.toDataURL("image/jpeg", 0.8);
+            const [, b] = compressed.split(",");
+            resolve({ b64: b, mime: "image/jpeg" });
+          };
+          img.onerror = reject;
+          img.src = sourceUrl;
+        });
+        base64 = b64;
+        mimeType = mime;
+      }
       const result = await convertToAnimeMutation1.mutateAsync({
         photoBase64: base64,
         mimeType,
-        element: card1.element,
+        element: c.element,
       });
       if (result.imageUrl) {
         updateCard1({ photoUrl: result.imageUrl });
@@ -134,26 +159,55 @@ export default function Home() {
     } finally {
       setIsGeneratingAI1(false);
     }
-  }, [card1.originalPhotoUrl, card1.photoUrl, card1.element, updateCard1, convertToAnimeMutation1]);
+  }, [updateCard1, convertToAnimeMutation1]);
 
   const handleAIAnime2Direct = useCallback(async () => {
-    // originalPhotoUrl（トリミング済み JPEG data URL）を優先使用。
-    // AI加工後に photoUrl が /manus-storage/... に上書きされてもこちらは変わらない。
-    const sourceUrl = card2.originalPhotoUrl || card2.photoUrl;
-    if (!sourceUrl || !sourceUrl.startsWith("data:")) {
+    const c = card2Ref.current;
+    // originalPhotoUrl（トリミング済み JPEG data URL）を優先使用
+    const sourceUrl = c.originalPhotoUrl || c.photoUrl;
+    if (!sourceUrl) {
       toast.error("2枚目の写真をアップロードしてください");
       return;
     }
     setIsGeneratingAI2(true);
     toast.info("2枚目：AIがDQ風チビキャラに変換中... 30～60秒ほどお待ちください");
     try {
-      // originalPhotoUrl はトリミング済み JPEG 80% の data URL → OpenAI が確実に受け付けられる形式
-      const [header, base64] = sourceUrl.split(",");
-      const mimeType = header.match(/data:([^;]+)/)?.[1] || "image/jpeg";
+      let base64: string;
+      let mimeType: string;
+      if (sourceUrl.startsWith("data:")) {
+        const [header, b64] = sourceUrl.split(",");
+        base64 = b64;
+        mimeType = header.match(/data:([^;]+)/)?.[1] || "image/jpeg";
+      } else {
+        const { b64, mime } = await new Promise<{ b64: string; mime: string }>((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.onload = () => {
+            const MAX_SIZE = 1024;
+            let { width, height } = img;
+            if (width > MAX_SIZE || height > MAX_SIZE) {
+              if (width > height) { height = Math.round((height * MAX_SIZE) / width); width = MAX_SIZE; }
+              else { width = Math.round((width * MAX_SIZE) / height); height = MAX_SIZE; }
+            }
+            const canvas = document.createElement("canvas");
+            canvas.width = width; canvas.height = height;
+            const ctx = canvas.getContext("2d");
+            if (!ctx) { reject(new Error("Canvas error")); return; }
+            ctx.drawImage(img, 0, 0, width, height);
+            const compressed = canvas.toDataURL("image/jpeg", 0.8);
+            const [, b] = compressed.split(",");
+            resolve({ b64: b, mime: "image/jpeg" });
+          };
+          img.onerror = reject;
+          img.src = sourceUrl;
+        });
+        base64 = b64;
+        mimeType = mime;
+      }
       const result = await convertToAnimeMutation2.mutateAsync({
         photoBase64: base64,
         mimeType,
-        element: card2.element,
+        element: c.element,
       });
       if (result.imageUrl) {
         updateCard2({ photoUrl: result.imageUrl });
@@ -167,7 +221,7 @@ export default function Home() {
     } finally {
       setIsGeneratingAI2(false);
     }
-  }, [card2.originalPhotoUrl, card2.photoUrl, card2.element, updateCard2, convertToAnimeMutation2]);
+  }, [updateCard2, convertToAnimeMutation2]);
 
   const handleDownload = useCallback(async () => {
     setIsDownloading(true);
@@ -537,12 +591,12 @@ export default function Home() {
       {/* パスワードモーダル */}
       <AIPasswordModal
         open={passwordModalTarget === 1}
-        onSuccess={executeAIAnime1}
+        onSuccess={() => { setPasswordModalTarget(null); handleAIAnime1Direct(); }}
         onCancel={() => setPasswordModalTarget(null)}
       />
       <AIPasswordModal
         open={passwordModalTarget === 2}
-        onSuccess={executeAIAnime2}
+        onSuccess={() => { setPasswordModalTarget(null); handleAIAnime2Direct(); }}
         onCancel={() => setPasswordModalTarget(null)}
       />
     </div>
