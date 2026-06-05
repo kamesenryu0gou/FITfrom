@@ -342,7 +342,7 @@ async function generateAnimeCharacter(options: {
         prompt,
         n: 1,
         size: "1024x1024",
-        quality: "high",
+        quality: "medium",
       });
 
       const b64 = editData.data?.[0]?.b64_json;
@@ -438,7 +438,7 @@ async function generateLicenseCharacter(options: {
     prompt: LICENSE_CARS_PROMPT,
     n: 1,
     size: "1024x1024",
-    quality: "high",
+    quality: "medium",
   });
 
   const b64 = editData.data?.[0]?.b64_json;
