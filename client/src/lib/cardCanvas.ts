@@ -279,28 +279,28 @@ export async function downloadCard(cardData: CardData): Promise<void> {
   const blob = await renderCardToBlob(cardData);
   const filename = `fitwars-card-${cardData.cardName || "my-card"}.png`;
 
-  // iOS検出：User Agentに iPhone/iPad が含まれるかチェック
-  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const file = new File([blob], filename, { type: "image/png" });
 
-  if (isIOS) {
-    // iOS: 新しいタブで画像を開く→ユーザーが長押しで「写真に保存」できる
-    const url = URL.createObjectURL(blob);
-    const newTab = window.open(url, "_blank");
-    if (!newTab) {
-      // ポップアップブロック時はアンカーフォールバック
-      const a = document.createElement("a");
-      a.href = url;
-      a.target = "_blank";
-      a.rel = "noopener";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+  // iOS / Android: Web Share API で写真アプリに直接保存
+  if (
+    typeof navigator.share === "function" &&
+    typeof navigator.canShare === "function" &&
+    navigator.canShare({ files: [file] })
+  ) {
+    try {
+      await navigator.share({
+        files: [file],
+        title: "FIT WARS カード",
+        text: "FIT WARS Card Maker",
+      });
+      return;
+    } catch (err) {
+      if ((err as Error).name === "AbortError") return;
+      // 共有失敗時はフォールバックに進む
     }
-    setTimeout(() => URL.revokeObjectURL(url), 30000);
-    return;
   }
 
-  // Android / デスクトップ: <a download> でダウンロード
+  // デスクトップ / 非対応ブラウザ: <a download> でダウンロード
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
