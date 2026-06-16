@@ -274,6 +274,9 @@ export async function renderCardToBlob(cardData: CardData, scale = 3): Promise<B
  *
  * Desktop / unsupported browsers:
  *   Triggers a standard file download
+ *
+ * iOS注意: navigator.share() はユーザーのタップに近いタイミングで呼ぶ必要がある。
+ * Blob生成直後に share() を呼ぶことでジェスチャー制約を回避する。
  */
 export async function downloadCard(cardData: CardData): Promise<void> {
   const blob = await renderCardToBlob(cardData);
@@ -281,26 +284,30 @@ export async function downloadCard(cardData: CardData): Promise<void> {
 
   const file = new File([blob], filename, { type: "image/png" });
 
-  // iOS / Android: Web Share API で写真アプリに直接保存
-  if (
+  // iOS / Android: Web Share API — Blob生成直後に share() を呼んでジェスチャー制約を回避
+  const canUseShare =
     typeof navigator.share === "function" &&
     typeof navigator.canShare === "function" &&
-    navigator.canShare({ files: [file] })
-  ) {
+    navigator.canShare({ files: [file] });
+
+  if (canUseShare) {
     try {
+      // share() をできるだけ早く呼ぶ（await を挟まない）
       await navigator.share({
         files: [file],
         title: "FIT WARS カード",
-        text: "FIT WARS Card Maker",
       });
       return;
     } catch (err) {
-      if ((err as Error).name === "AbortError") return;
-      // 共有失敗時はフォールバックに進む
+      const name = (err as Error).name;
+      // AbortError = ユーザーがキャンセル → 正常終了
+      if (name === "AbortError") return;
+      // NotAllowedError = ジェスチャー制約でブロック → フォールバックへ
+      // その他エラー → フォールバックへ
     }
   }
 
-  // デスクトップ / 非対応ブラウザ: <a download> でダウンロード
+  // デスクトップ / 非対応ブラウザ / share失敗時: <a download> でダウンロード
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -530,22 +537,23 @@ export async function downloadDualCard(card1: CardData, card2: CardData): Promis
   const filename = "fitwars-card-sheet.png";
   const file = new File([blob], filename, { type: "image/png" });
 
-  // Web Share API (iOS/Android ネイティブ共有シートで写真アプリに保存)
-  if (
+  // Web Share API (iOS/Android) — Blob生成直後に share() を呼んでジェスチャー制約を回避
+  const canUseShare =
     typeof navigator.share === "function" &&
     typeof navigator.canShare === "function" &&
-    navigator.canShare({ files: [file] })
-  ) {
+    navigator.canShare({ files: [file] });
+
+  if (canUseShare) {
     try {
       await navigator.share({
         files: [file],
         title: "FIT WARS カードシート",
-        text: "FIT WARS Card Maker — 2面付きカードシート",
       });
       return;
     } catch (err) {
-      if ((err as Error).name === "AbortError") return;
-      // 共有失敗時はフォールバックに進む
+      const name = (err as Error).name;
+      if (name === "AbortError") return;
+      // NotAllowedError ・その他 → フォールバックへ
     }
   }
 

@@ -673,10 +673,24 @@ async function downloadLicenseSheet(card1: LicenseData, card2: LicenseData) {
   );
   const filename = "license-sheet.png";
   const file = new File([blob], filename, { type: "image/png" });
-  if (typeof navigator.share === "function" && typeof navigator.canShare === "function" && navigator.canShare({ files: [file] })) {
-    try { await navigator.share({ files: [file], title: "免許メーカー" }); return; }
-    catch (e) { if ((e as Error).name === "AbortError") return; }
+
+  // iOS/Android: Blob生成直後に share() を呼んでジェスチャー制約を回避
+  const canUseShare =
+    typeof navigator.share === "function" &&
+    typeof navigator.canShare === "function" &&
+    navigator.canShare({ files: [file] });
+
+  if (canUseShare) {
+    try {
+      await navigator.share({ files: [file], title: "免許メーカー" });
+      return;
+    } catch (e) {
+      const name = (e as Error).name;
+      if (name === "AbortError") return;
+      // NotAllowedError ・その他 → フォールバックへ
+    }
   }
+
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url; a.download = filename;
